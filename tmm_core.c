@@ -40,29 +40,28 @@ typedef struct {
 /**
  * @brief Makes a 2x2 array of [[a,b],[c,d]]
  *
- * @param
- * @param
+ * Must declare the matrix in the outer scope and pass it into
+ * this function for initialization of the elements
+ *
+ * @param a
+ * @param b
+ * @param c
+ * @param d
+ * @param matrix 2x2 array
  * @return
  */
 uint8_t make_2x2_array(
-    const double a, const double b, const double c, const double d
+    const double a,
+    const double b,
+    const double c,
+    const double d,
+    double complex matrix[2][2]
 )
 {
-    // Must declare the matrix in the outer scope and pass it into
-    // this function for initialization of the elements
-
-    // Declare and initialize a 2x2 matrix (example to be used in outer scope)
-    double matrix[2][2] = {
-        {a, b},
-        {c, d}
-    };
-
-    // The core of the function is below
-
-    // matrix[0][0] = a
-    // matrix[0][1] = b
-    // matrix[1][0] = c
-    // matrix[1][1] = d
+    matrix[0][0] = a;
+    matrix[0][1] = b;
+    matrix[1][0] = c;
+    matrix[1][1] = d;
 
     return 0;
 }
@@ -95,6 +94,8 @@ double snell(const double n_1, const double n_2, const double th_1)
 {
     const double th_2_guess = asin(n_1 * sin(th_1) / n_2);
 
+    // is_forward_angle()
+
     return th_2_guess;
 }
 
@@ -109,7 +110,10 @@ double snell(const double n_1, const double n_2, const double th_1)
  * @return
  */
 uint8_t list_snell(
-    const double n_list[], const uint8_t n_list_size, const double th_0, double angles[]
+    const double complex n_list[],
+    const uint8_t n_list_size,
+    const double th_0,
+    double angles[]
 )
 {
     const double n_list_0 = n_list[0];
@@ -131,11 +135,11 @@ uint8_t list_snell(
  * @param th_f
  * @return
  */
-double interface_r(
-    const uint8_t polarization, const double n_i, const double n_f, const double th_i, const double th_f
+double complex interface_r(
+    const uint8_t polarization, const double complex n_i, const double complex n_f, const double th_i, const double th_f
 )
 {
-    double reflectivity;
+    double complex reflectivity;
 
     if (polarization == 0)  // s-polarization
     {
@@ -164,11 +168,27 @@ double interface_r(
  * @param
  * @return
  */
-double interface_t(
-    uint8_t polarization, double n_i, double n_f, double th_i, double th_f
+double complex interface_t(
+    uint8_t polarization, double complex n_i, double complex n_f, double th_i, double th_f
 )
 {
-    return 0.0;
+    double complex transmissivity;
+
+    if (polarization == 0)  // s-polarization
+    {
+        transmissivity = (
+            2 * n_i * cos(th_i)
+            / ( n_i * cos(th_i) + n_f * cos(th_f) )
+        );
+    } else  // p-polarization
+    {
+        transmissivity = (
+            2 * n_i * cos(th_i)
+            / ( n_f * cos(th_i) + n_i * cos(th_f) )
+        );
+    }
+
+    return transmissivity;
 }
 
 
@@ -181,15 +201,12 @@ double interface_t(
  * @param
  * @return
  */
-double R_from_r(const double r)
+double R_from_r(const double complex r)
 {
-    // Must take modulus squared of r
-    const double reflectance = r * r;  // temporary
-
-    // // Method 1: Manually compute the modulus squared
-    // double real_part = creal(z);
-    // double imag_part = cimag(z);
-    // double mod_squared = real_part * real_part + imag_part * imag_part;
+    // Method 1: Manually compute the modulus squared
+    const double real_part = creal(r);
+    const double imag_part = cimag(r);
+    const double reflectance = real_part * real_part + imag_part * imag_part;
 
     return reflectance;
 }
@@ -209,16 +226,33 @@ double R_from_r(const double r)
  * @return
  */
 double T_from_t(
-    const uint8_t pol, const double t, const double n_i, const double n_f, const double th_i, const double th_f
+    const uint8_t pol,
+    const double complex t,
+    const double complex n_i,
+    const double complex n_f,
+    const double th_i,
+    const double th_f
 )
 {
-    // Must take modulus squared of t
-    const double transmittance = t * t;  // temporary
+    // Method 1: Manually compute the modulus squared
+    const double real_part = creal(t);
+    const double imag_part = cimag(t);
 
-    // // Method 1: Manually compute the modulus squared
-    // double real_part = creal(z);
-    // double imag_part = cimag(z);
-    // double mod_squared = real_part * real_part + imag_part * imag_part;
+    double transmittance;
+
+    if (pol == 0)  // s-polarization
+    {
+        transmittance = (
+            (real_part * real_part + imag_part * imag_part)
+            * ( creal( n_f * cos(th_f) ) / creal( n_i * cos(th_i) ) )
+        );
+    } else  // p-polarization
+    {
+        transmittance = (
+            (real_part * real_part + imag_part * imag_part)
+            * ( creal( n_f * conj(cos(th_f)) ) / creal( n_i * conj(cos(th_i)) ) )
+        );
+    }
 
     return transmittance;
 }
@@ -237,26 +271,27 @@ double T_from_t(
  * @return
  */
 double power_entering_from_r(
-    const uint8_t pol, const double r, const double n_i, const double th_i
+    const uint8_t pol,
+    const double complex r,
+    const double complex n_i,
+    const double th_i
 )
 {
-    double power = 0.0;
+    double power;
 
-    // Placeholder, must update with proper computation!!!
-    //
-    // if (pol == 0)  // s-polarization
-    // {
-    //     power = (
-    //         ( n_i * cos(th_i) - n_f * cos(th_f) )
-    //         / ( n_i * cos(th_i) + n_f * cos(th_f) )
-    //     );
-    // } else  // p-polarization
-    // {
-    //     power = (
-    //         ( n_f * cos(th_i) - n_i * cos(th_f) )
-    //         / ( n_f * cos(th_i) + n_i * cos(th_f) )
-    //     );
-    // }
+    if (pol == 0)  // s-polarization
+    {
+        power = (
+            creal( n_i * cos(th_i) * (1 + conj(r)) * (1 - r) )
+            / creal( n_i * cos(th_i) )
+        );
+    } else  // p-polarization
+    {
+        power = (
+            creal( n_i * conj(cos(th_i)) * (1 + r) * (1 - conj(r)) )
+            / creal( n_i * conj(cos(th_i)) )
+        );
+    }
 
     return power;
 }
@@ -272,15 +307,18 @@ double power_entering_from_r(
  * @return
  */
 double interface_R(
-    const uint8_t polarization, const double n_i, const double n_f, const double th_i, const double th_f
+    const uint8_t polarization,
+    const double complex n_i,
+    const double complex n_f,
+    const double th_i,
+    const double th_f
 )
 {
-    const double r = interface_r(polarization, n_i, n_f, th_i, th_f);
-
-    // double R = R_from_r(r);
-    // return R;
-
-    return r;
+    const double complex r = (
+        interface_r(polarization, n_i, n_f, th_i, th_f)
+    );
+    const double R = R_from_r(r);
+    return R;
 }
 
 
@@ -292,17 +330,18 @@ double interface_R(
  * @return
  */
 double interface_T(
-    const uint8_t polarization, const double n_i, const double n_f, const double th_i, const double th_f
+    const uint8_t polarization,
+    const double complex n_i,
+    const double complex n_f,
+    const double th_i,
+    const double th_f
 )
 {
-    // const double t = interface_t(polarization, n_i, n_f, th_i, th_f);
-    //
-    // // double T = T_from_t(t);
-    // // return T;
-    //
-    // return t;
-
-    return 0.0;
+    const double complex t = (
+        interface_t(polarization, n_i, n_f, th_i, th_f)
+    );
+    const double T = T_from_t(polarization, t, n_i, n_f, th_i, th_f);
+    return T;
 }
 
 
@@ -320,17 +359,114 @@ double interface_T(
  * @return
  */
 uint8_t coh_tmm(
-    uint8_t pol, double n_list[], double d_list[], uint8_t num_layers, double th_0, double lam_vac
+    const uint8_t pol,
+    const double complex n_list[],
+    const double d_list[],
+    const uint8_t num_layers,
+    const double th_0,
+    const double lam_vac
 )
 {
-    // is_forward_angle()
-    // list_snell()
-    // interface_t()
-    // interface_r()
-    // make_2x2_array()
-    // R_from_r()
-    // T_from_t()
-    // power_entering_from_r()
+    // is_forward_angle();
+
+    double th_list[num_layers];
+    list_snell(n_list, num_layers, th_0, th_list);
+
+    // kz is the z-component of (complex) angular wavevector for forward-moving
+    // wave. Positive imaginary part means decaying.
+    double complex kz_list[num_layers];
+    for (int i = 0; i < num_layers; i++)
+    {
+        kz_list[i] = (
+            2 * M_PI * n_list[i] * cos(th_list[i]) / lam_vac
+        );
+    }
+
+    // delta is the total phase accrued by traveling through a given layer.
+    // Ignore warning about inf multiplication
+    double complex delta[num_layers];
+    for (int i = 0; i < num_layers; i++)
+    {
+        delta[i] = kz_list[i] * d_list[i];
+    }
+
+    // For a very opaque layer, reset delta to avoid divide-by-0 and similar
+    // errors. The criterion imag(delta) > 35 corresponds to single-pass
+    // transmission < 1e-30 --- small enough that the exact value doesn't
+    // matter.
+    for (int i = 1; i < num_layers - 1; i++)
+    {
+        if ( cimag(delta[i]) > 35 )
+        {
+            delta[i] = creal(delta[i]) + cimag(35);
+        }
+
+        // TODO: Must add opacity check and warning!!!
+    }
+
+    // t_list[i,j] and r_list[i,j] are transmission and reflection amplitudes,
+    // respectively, coming from i, going to j. Only need to calculate this when
+    // j=i+1. (2D array is overkill but helps avoid confusion.)
+    double complex t_list[num_layers][num_layers];
+    double complex r_list[num_layers][num_layers];
+    for (int i = 0; i < num_layers - 1; i++)
+    {
+        t_list[i][i + 1] = (
+            interface_t(
+                pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]
+            )
+        );
+
+        r_list[i][i + 1] = (
+            interface_r(
+                pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]
+            )
+        );
+    }
+
+    // At the interface between the (n-1)st and nth material, let v_n be the
+    // amplitude of the wave on the nth side heading forwards (away from the
+    // boundary), and let w_n be the amplitude on the nth side heading backwards
+    // (towards the boundary). Then (v_n,w_n) = M_n (v_{n+1},w_{n+1}). M_n is
+    // M_list[n]. M_0 and M_{num_layers-1} are not defined.
+    // My M is a bit different than Sernelius's, but Mtilde is the same.
+    double complex M_list[num_layers][2][2];
+    for (int i = 1; i < num_layers - 1; i++)
+    {
+        continue;
+    }
+    double complex Mtilde[2][2];
+    make_2x2_array(1, 0, 0, 1, Mtilde);
+
+    // Net complex transmission and reflection amplitudes
+    double complex r = Mtilde[1][0] / Mtilde[0][0];
+    double complex t = 1 / Mtilde[0][0];
+
+    // vw_list[n] = [v_n, w_n]. v_0 and w_0 are undefined because the 0th medium
+    // has no left interface.
+    double complex vw_list[num_layers][2];
+    // TODO: vw = array([[t],[0]])
+    // TODO: vw_list[-1,:] = np.transpose(vw)
+    // TODO: must confirm loop is implemented correctly
+    for (int i = num_layers - 2; i > 0; i--)
+    {
+        // TODO: vw = np.dot(M_list[i], vw)
+        // TODO: vw_list[i,:] = np.transpose(vw)
+        continue;
+    }
+
+    // Net transmitted and reflected power, as a proportion of the
+    // incoming light power.
+    const double R = R_from_r(r);
+    // TODO: confirm n_list[-1] and n_list[num_layers] are equivalent
+    // TODO: confirm th_list[-1] and th_list[num_layers] are equivalent
+    const double T = (
+        T_from_t(
+            pol, t, n_list[0], n_list[num_layers], th_list[0], th_list[num_layers]
+        )
+    );
+    const double power_entering = power_entering_from_r(pol, r, n_list[0], th_0);
+
     return 0;
 }
 
@@ -345,9 +481,27 @@ uint8_t coh_tmm(
  * @return
  */
 double coh_tmm_reverse(
-    uint8_t pol, double n_list[], double d_list[], double th_0, double lam_vac
+    const uint8_t pol,
+    const double n_list[],
+    const double d_list[],
+    const uint8_t num_layers,
+    const double th_0,
+    const double lam_vac
 )
 {
+    // TODO: confirm n_list[-1] and n_list[num_layers] is equivalent
+    const double th_f = snell(n_list[0], n_list[num_layers], th_0);
+
+    double complex n_list_rev[num_layers];
+    double d_list_rev[num_layers];
+    for (int i = 0; i < num_layers; i++)
+    {
+        n_list_rev[i] = n_list[num_layers - i];
+        d_list_rev[i] = d_list[num_layers - i];
+    }
+
+    coh_tmm(pol, n_list_rev, d_list_rev, num_layers, th_f, lam_vac);
+
     return 0.0;
 }
 
@@ -359,14 +513,22 @@ double coh_tmm_reverse(
  *
  * @param n_list
  * @param d_list
+ * @param num_layers
  * @param th_0
  * @param lam_vac
  * @return
  */
 double ellips(
-    double n_list[], double d_list[], double th_0, double lam_vac
+    const double n_list[],
+    const double d_list[],
+    const uint8_t num_layers,
+    const double th_0,
+    const double lam_vac
 )
 {
+    uint8_t s_data = coh_tmm(0, n_list, d_list, num_layers, th_0, lam_vac);
+    uint8_t p_data = coh_tmm(1, n_list, d_list, num_layers, th_0, lam_vac);
+    // TODO: finish implementation!!!
     return 0.0;
 }
 
@@ -376,14 +538,20 @@ double ellips(
  *
  * @param n_list
  * @param d_list
+ * @param num_layers
  * @param th_0
  * @param lam_vac
  * @return
  */
 double unpolarized_RT(
-    double n_list[], double d_list[], double th_0, double lam_vac
+    const double n_list[],
+    const double d_list[],
+    const uint8_t num_layers,
+    const double th_0,
+    const double lam_vac
 )
 {
+    // TODO: finish implementation!!!
     return 0.0;
 }
 
@@ -437,17 +605,26 @@ uint8_t find_in_structure_with_inf(
 
 
 /**
- * @brief
+ * @brief Gives the location of the start of any given layer
+ *
+ * The location of the start of any given layer, relative to the front
+ * of the whole multilayer structure. (i.e. the start of layer 1)
  *
  * @param d_list The list of thicknesses of layers
- * @param d_list_size
+ * @param d_list_size The number of layers
  * @param final_answer
  * @return
  */
 uint8_t layer_starts(
-    const double d_list[], uint8_t d_list_size, double final_answer[]
+    const double d_list[], const uint8_t d_list_size, double final_answer[]
 )
 {
+    final_answer[0] = 0.0;  // TODO: replace with -inf
+    final_answer[1] = 0.0;
+    for (int i = 2; i < d_list_size; i++)
+    {
+        final_answer[i] = final_answer[i - 1] + d_list[i - 1];
+    }
     return 0;
 }
 
@@ -455,13 +632,36 @@ uint8_t layer_starts(
 /**
  * @brief An array listing what proportion of light is absorbed in each layer.
  *
- *
+ * TODO: must finished implementation!!!
  *
  * @param coh_tmm_data
+ * @param num_layers
+ * @param final_answer
  * @return
  */
-double absorp_in_each_layer(double coh_tmm_data)
+double absorp_in_each_layer(
+    double coh_tmm_data,
+    const uint8_t num_layers,
+    double final_answer[]
+)
 {
+    double power_entering_each_layer[num_layers];
+    power_entering_each_layer[0] = 1.0;
+
+    for (int i = 2; i < num_layers - 1; i++)
+    {
+        // TODO: must finished position_resolved() implementation
+        // power_entering_each_layer[i] = position_resolved(i, 0, coh_tmm_data);
+        continue;
+    }
+
+    // double final_answer[num_layers];
+    for (int i = 0; i < num_layers - 1; i++)
+    {
+        final_answer[i] = power_entering_each_layer[i] - power_entering_each_layer[i + 1];
+    }
+    final_answer[num_layers] = power_entering_each_layer[num_layers];
+
     return 0.0;
 }
 
