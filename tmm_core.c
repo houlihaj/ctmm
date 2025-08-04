@@ -26,13 +26,14 @@ typedef struct {
     double complex t;  // complex transmission amplitude (i.e. transmission coefficient)
     double R;  // real reflectivity
     double T;  // real transmissivity
+    uint8_t num_layers;
     double power_entering;
-    double vw_list;
-    double complex kz_list;
-    double th_list;
+    double* vw_list;
+    double complex* kz_list;
+    double* th_list;
     double pol;
-    double complex n_list;
-    double d_list;
+    double complex* n_list;
+    double* d_list;
     double th_0;
     double lam_vac;
 } CohTmmData;
@@ -115,15 +116,16 @@ uint8_t is_forward_angle(const double complex n, const double theta)
  * @param n_1
  * @param n_2
  * @param th_1
+ * @param th_2_guess Pass by reference from outer scope
  * @return
  */
-double snell(const double n_1, const double n_2, const double th_1)
+uint8_t snell(const double n_1, const double n_2, const double th_1, double* th_2_guess)
 {
-    const double th_2_guess = asin(n_1 * sin(th_1) / n_2);
+    *th_2_guess = asin(n_1 * sin(th_1) / n_2);  // units of rad
 
     // is_forward_angle()
 
-    return th_2_guess;
+    return 0;
 }
 
 
@@ -146,6 +148,7 @@ uint8_t list_snell(
     const double n_list_0 = n_list[0];
     for (uint8_t i = 0; i < n_list_size; i++)
     {
+        // TODO: May have to do creal(n_list_0) instead of n_list_0
         angles[i] = asin( n_list_0 * sin(th_0) / n_list[i] );
     }
     return 0;
@@ -160,33 +163,33 @@ uint8_t list_snell(
  * @param n_f
  * @param th_i
  * @param th_f
+ * @param r Pass by reference from outer scope
  * @return
  */
-double complex interface_r(
+uint8_t interface_r(
     const uint8_t polarization,
     const double complex n_i,
     const double complex n_f,
     const double th_i,
-    const double th_f
+    const double th_f,
+    double complex* r
 )
 {
-    double complex reflection;
-
     if (polarization == 0)  // s-polarization
     {
-        reflection = (
+        *r = (
             ( n_i * cos(th_i) - n_f * cos(th_f) )
             / ( n_i * cos(th_i) + n_f * cos(th_f) )
         );
     } else  // p-polarization
     {
-        reflection = (
+        *r = (
             ( n_f * cos(th_i) - n_i * cos(th_f) )
             / ( n_f * cos(th_i) + n_i * cos(th_f) )
         );
     }
 
-    return reflection;
+    return 0;
 }
 
 
@@ -207,7 +210,7 @@ double complex interface_t(
     const double th_f
 )
 {
-    double complex transmission;
+    double complex transmission;  // complex transmission coefficient (i.e. transmission amplitude)
 
     if (polarization == 0)  // s-polarization
     {
@@ -232,18 +235,18 @@ double complex interface_t(
  *
  *
  *
- * @param
- * @param
+ * @param r
+ * @param reflectivity
  * @return
  */
-double R_from_r(const double complex r)
+uint8_t R_from_r(const double complex r, double* reflectivity)
 {
     // Method 1: Manually compute the modulus squared
     const double real_part = creal(r);
     const double imag_part = cimag(r);
-    const double reflectivity = real_part * real_part + imag_part * imag_part;
+    *reflectivity = real_part * real_part + imag_part * imag_part;
 
-    return reflectivity;
+    return 0;
 }
 
 
@@ -258,38 +261,40 @@ double R_from_r(const double complex r)
  * @param n_f
  * @param th_i
  * @param th_f
+ * @param transmissivity Pass by reference from outer scope
  * @return
  */
-double T_from_t(
+uint8_t T_from_t(
     const uint8_t pol,
     const double complex t,
     const double complex n_i,
     const double complex n_f,
     const double th_i,
-    const double th_f
+    const double th_f,
+    double* transmissivity
 )
 {
     // Method 1: Manually compute the modulus squared
     const double real_part = creal(t);
     const double imag_part = cimag(t);
 
-    double transmissivity;
+    // double transmissivity;
 
     if (pol == 0)  // s-polarization
     {
-        transmissivity = (
+        *transmissivity = (
             (real_part * real_part + imag_part * imag_part)
             * ( creal( n_f * cos(th_f) ) / creal( n_i * cos(th_i) ) )
         );
     } else  // p-polarization
     {
-        transmissivity = (
+        *transmissivity = (
             (real_part * real_part + imag_part * imag_part)
             * ( creal( n_f * conj(cos(th_f)) ) / creal( n_i * conj(cos(th_i)) ) )
         );
     }
 
-    return transmissivity;
+    return 0;
 }
 
 
@@ -302,33 +307,33 @@ double T_from_t(
  * @param pol
  * @param r
  * @param n_i The refractive index of incident medium
- * @param th_i The complex propogation angle through incident medium
+ * @param th_i The complex propagation angle through incident medium
+ * @param power Pass by reference from outer scope
  * @return
  */
-double power_entering_from_r(
+uint8_t power_entering_from_r(
     const uint8_t pol,
     const double complex r,
     const double complex n_i,
-    const double th_i
+    const double th_i,
+    double* power
 )
 {
-    double power;
-
     if (pol == 0)  // s-polarization
     {
-        power = (
+        *power = (
             creal( n_i * cos(th_i) * (1 + conj(r)) * (1 - r) )
             / creal( n_i * cos(th_i) )
         );
     } else  // p-polarization
     {
-        power = (
+        *power = (
             creal( n_i * conj(cos(th_i)) * (1 + r) * (1 - conj(r)) )
             / creal( n_i * conj(cos(th_i)) )
         );
     }
 
-    return power;
+    return 0;
 }
 
 
@@ -349,10 +354,11 @@ double interface_R(
     const double th_f
 )
 {
-    const double complex r = (
-        interface_r(polarization, n_i, n_f, th_i, th_f)
-    );
-    const double R = R_from_r(r);
+    double complex r;
+    interface_r(polarization, n_i, n_f, th_i, th_f, &r);
+
+    double R;
+    R_from_r(r, &R);
     return R;
 }
 
@@ -375,7 +381,8 @@ double interface_T(
     const double complex t = (
         interface_t(polarization, n_i, n_f, th_i, th_f)
     );
-    const double T = T_from_t(polarization, t, n_i, n_f, th_i, th_f);
+    double T;
+    T_from_t(polarization, t, n_i, n_f, th_i, th_f, &T);
     return T;
 }
 
@@ -452,11 +459,11 @@ uint8_t coh_tmm(
             )
         );
 
-        r_list[i][i + 1] = (
-            interface_r(
-                pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]
-            )
+        double complex r;
+        interface_r(
+            pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1], &r
         );
+        r_list[i][i + 1] = r;
     }
 
     // At the interface between the (n-1)st and nth material, let v_n be the
@@ -492,15 +499,16 @@ uint8_t coh_tmm(
 
     // Net transmitted and reflected power, as a proportion of the
     // incoming light power.
-    const double R = R_from_r(r);
+    double R;
+    R_from_r(r, &R);
     // TODO: confirm n_list[-1] and n_list[num_layers] are equivalent
     // TODO: confirm th_list[-1] and th_list[num_layers] are equivalent
-    const double T = (
-        T_from_t(
-            pol, t, n_list[0], n_list[num_layers], th_list[0], th_list[num_layers]
-        )
+    double T;
+    T_from_t(
+        pol, t, n_list[0], n_list[num_layers], th_list[0], th_list[num_layers], &T
     );
-    const double power_entering = power_entering_from_r(pol, r, n_list[0], th_0);
+    double power_entering;
+    power_entering_from_r(pol, r, n_list[0], th_0, &power_entering);
 
     return 0;
 }
@@ -525,7 +533,8 @@ uint8_t coh_tmm_reverse(
 )
 {
     // TODO: confirm n_list[-1] and n_list[num_layers] is equivalent
-    const double th_f = snell(n_list[0], n_list[num_layers], th_0);
+    double th_f;
+    snell(n_list[0], n_list[num_layers], th_0, &th_f);
 
     double complex n_list_rev[num_layers];
     double d_list_rev[num_layers];
@@ -553,7 +562,7 @@ uint8_t coh_tmm_reverse(
  * @param lam_vac
  * @return
  */
-double ellips(
+uint8_t ellips(
     const double complex n_list[],
     const double d_list[],
     const uint8_t num_layers,
@@ -564,7 +573,8 @@ double ellips(
     uint8_t s_data = coh_tmm(0, n_list, d_list, num_layers, th_0, lam_vac);
     uint8_t p_data = coh_tmm(1, n_list, d_list, num_layers, th_0, lam_vac);
     // TODO: finish implementation!!!
-    return 0.0;
+    EllipsData ellips_data;
+    return 0;
 }
 
 

@@ -14,7 +14,7 @@
 // uint8_t is_forward_angle(double complex n, double theta);
 //
 //
-// double snell(const double n_1, const double n_2, const double th_1);
+uint8_t snell(const double n_1, const double n_2, const double th_1, double* th_2_guess);
 //
 //
 // uint8_t list_snell(
@@ -22,9 +22,9 @@
 // );
 //
 //
-// double interface_r(
-//     const uint8_t polarization, const double n_i, const double n_f, const double th_i, const double th_f
-// );
+uint8_t interface_r(
+    uint8_t polarization, double complex n_i, double complex n_f, double th_i, double th_f, double complex* r
+);
 //
 //
 // double interface_t(
