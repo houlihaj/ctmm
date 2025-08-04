@@ -2,7 +2,14 @@
 // Created by johnh on 8/2/2025.
 //
 
+/**
+ * Definitions:
+ *
+ *
+ */
+
 #include <stdint.h>
+#include <stdbool.h>
 #include <complex.h>
 #include <math.h>
 #include "tmm_core.h"
@@ -15,16 +22,16 @@
  * This struct holds integer values for the x and y coordinates.
  */
 typedef struct {
-    double r;  // complex reflectivity amplitude
-    double t;  // complex transmissivity amplitude
-    double R;
-    double T;
+    double complex r;  // complex reflection amplitude (i.e. reflection coefficient)
+    double complex t;  // complex transmission amplitude (i.e. transmission coefficient)
+    double R;  // real reflectivity
+    double T;  // real transmissivity
     double power_entering;
     double vw_list;
-    double kz_list;
+    double complex kz_list;
     double th_list;
     double pol;
-    double n_list;
+    double complex n_list;
     double d_list;
     double th_0;
     double lam_vac;
@@ -74,9 +81,29 @@ uint8_t make_2x2_array(
  * @param theta Angle of incidence
  * @return
  */
-uint8_t is_forward_angle(double complex n, double theta)
+uint8_t is_forward_angle(const double complex n, const double theta)
 {
-    double complex ncostheta = n * cos(theta);
+    bool answer;
+
+    const double complex ncostheta = n * cos(theta);
+
+    if ( fabs( cimag(ncostheta) ) > 100.0 )
+    {
+        answer = cimag(ncostheta) > 0;
+    } else
+    {
+        answer = creal(ncostheta) > 0;
+    }
+
+    // // double-check the answer ... can't be too careful!
+    //
+    // if ( answer )
+    // {
+    //     // printf("is_forward_angle: true\n");
+    // } else
+    // {
+    //     // printf("is_forward_angle: false\n");
+    // }
 
     return 0;
 }
@@ -136,26 +163,30 @@ uint8_t list_snell(
  * @return
  */
 double complex interface_r(
-    const uint8_t polarization, const double complex n_i, const double complex n_f, const double th_i, const double th_f
+    const uint8_t polarization,
+    const double complex n_i,
+    const double complex n_f,
+    const double th_i,
+    const double th_f
 )
 {
-    double complex reflectivity;
+    double complex reflection;
 
     if (polarization == 0)  // s-polarization
     {
-        reflectivity = (
+        reflection = (
             ( n_i * cos(th_i) - n_f * cos(th_f) )
             / ( n_i * cos(th_i) + n_f * cos(th_f) )
         );
     } else  // p-polarization
     {
-        reflectivity = (
+        reflection = (
             ( n_f * cos(th_i) - n_i * cos(th_f) )
             / ( n_f * cos(th_i) + n_i * cos(th_f) )
         );
     }
 
-    return reflectivity;
+    return reflection;
 }
 
 
@@ -169,26 +200,30 @@ double complex interface_r(
  * @return
  */
 double complex interface_t(
-    uint8_t polarization, double complex n_i, double complex n_f, double th_i, double th_f
+    const uint8_t polarization,
+    const double complex n_i,
+    const double complex n_f,
+    const double th_i,
+    const double th_f
 )
 {
-    double complex transmissivity;
+    double complex transmission;
 
     if (polarization == 0)  // s-polarization
     {
-        transmissivity = (
+        transmission = (
             2 * n_i * cos(th_i)
             / ( n_i * cos(th_i) + n_f * cos(th_f) )
         );
     } else  // p-polarization
     {
-        transmissivity = (
+        transmission = (
             2 * n_i * cos(th_i)
             / ( n_f * cos(th_i) + n_i * cos(th_f) )
         );
     }
 
-    return transmissivity;
+    return transmission;
 }
 
 
@@ -206,9 +241,9 @@ double R_from_r(const double complex r)
     // Method 1: Manually compute the modulus squared
     const double real_part = creal(r);
     const double imag_part = cimag(r);
-    const double reflectance = real_part * real_part + imag_part * imag_part;
+    const double reflectivity = real_part * real_part + imag_part * imag_part;
 
-    return reflectance;
+    return reflectivity;
 }
 
 
@@ -238,23 +273,23 @@ double T_from_t(
     const double real_part = creal(t);
     const double imag_part = cimag(t);
 
-    double transmittance;
+    double transmissivity;
 
     if (pol == 0)  // s-polarization
     {
-        transmittance = (
+        transmissivity = (
             (real_part * real_part + imag_part * imag_part)
             * ( creal( n_f * cos(th_f) ) / creal( n_i * cos(th_i) ) )
         );
     } else  // p-polarization
     {
-        transmittance = (
+        transmissivity = (
             (real_part * real_part + imag_part * imag_part)
             * ( creal( n_f * conj(cos(th_f)) ) / creal( n_i * conj(cos(th_i)) ) )
         );
     }
 
-    return transmittance;
+    return transmissivity;
 }
 
 
@@ -480,9 +515,9 @@ uint8_t coh_tmm(
  * @param
  * @return
  */
-double coh_tmm_reverse(
+uint8_t coh_tmm_reverse(
     const uint8_t pol,
-    const double n_list[],
+    const double complex n_list[],
     const double d_list[],
     const uint8_t num_layers,
     const double th_0,
@@ -502,7 +537,7 @@ double coh_tmm_reverse(
 
     coh_tmm(pol, n_list_rev, d_list_rev, num_layers, th_f, lam_vac);
 
-    return 0.0;
+    return 0;
 }
 
 
@@ -519,7 +554,7 @@ double coh_tmm_reverse(
  * @return
  */
 double ellips(
-    const double n_list[],
+    const double complex n_list[],
     const double d_list[],
     const uint8_t num_layers,
     const double th_0,
@@ -544,7 +579,7 @@ double ellips(
  * @return
  */
 double unpolarized_RT(
-    const double n_list[],
+    const double complex n_list[],
     const double d_list[],
     const uint8_t num_layers,
     const double th_0,
@@ -564,11 +599,60 @@ double unpolarized_RT(
  * @param coh_tmm_data
  * @return
  */
-double position_resolved(
-    uint8_t layer, double distance, double coh_tmm_data
+uint8_t position_resolved(
+    const uint8_t layer, double distance, double coh_tmm_data
 )
 {
-    return 0.0;
+    if (layer > 0) {}
+    else {}
+
+    // Amplitude of forward-moving wave is Ef, backwards is Eb
+    // TODO: Ef = v * exp(1j * kz * distance)
+    // TODO: Eb = w * exp(-1j * kz * distance)
+
+    // // Poynting vector
+    // if (pol == 0)  // s-polarization
+    // {
+    //     poyn = (
+    //         creal( n * cos(th) * conj(Ef + Eb) * (Ef - Eb) )
+    //         / creal( n_0 * cos(th_0) )
+    //     );
+    // } else  // p-polarization
+    // {
+    //     poyn = (
+    //         creal( n * conj( cos(th) ) * (Ef + eb) * conj( Ef - Eb ) )
+    //         / creal( n_0 * conj( cos(th_0) ) )
+    //     );
+    // }
+    //
+    // // Absorbed energy density
+    // if (pol == 0)  // s-polarization
+    // {
+    //     absor = (
+    //         cimag(  ) / creal(  )
+    //     );
+    // } else  // p-polarization
+    // {
+    //     absor = (
+    //         cimag( n * conj( cos(th) ) * ( kz * abs(Ef - Eb) ** 2 - conj(kz) * abs(Ef + Eb) ** 2 ) )
+    //         / creal( n_0 * conj( cos(th_0) ) )
+    //     );
+    // }
+    //
+    // // Electric field
+    // if (pol == 0)  // s-polarization
+    // {
+    //     double Ex = 0.0;
+    //     double Ey = Ef + Eb;
+    //     double Ez = 0.0;
+    // } else  // p-polarization
+    // {
+    //     double Ex = (Ef - Eb) * cos(th);
+    //     double Ey = 0.0;
+    //     double Ez = (-Ef - Eb) * sin(th);
+    // }
+
+    return 0;
 }
 
 
@@ -576,14 +660,34 @@ double position_resolved(
  * @brief
  *
  * @param d_list The list of thicknesses of layers, all of which are finite
- * @param d_list_size
+ * @param d_list_size Size of d_list provided from the outer scope.
  * @param distance
+ * @param interface_info Provide array of size two from the outer scope.
  * @return
  */
 uint8_t find_in_structure(
-    const double d_list[], const uint8_t d_list_size, const double distance
+    const double d_list[],
+    const uint8_t d_list_size,
+    double distance,
+    double interface_info[]
 )
 {
+    if (distance < 0.0)
+    {
+        interface_info[0] = 0.0;
+        interface_info[1] = distance;
+    } else
+    {
+        uint8_t layer = 0;
+        while ( ( layer < d_list_size ) && ( distance >= d_list[layer] ) )
+        {
+            distance -= d_list[layer];
+            layer++;
+        }
+        interface_info[0] = layer;
+        interface_info[1] = distance;
+    }
+
     return 0;
 }
 
@@ -592,14 +696,24 @@ uint8_t find_in_structure(
  * @brief
  *
  * @param d_list
+ * @param d_list_size Size of d_list provided from the outer scope.
  * @param distance
+ * @param interface_info Provide array of size two from the outer scope.
  * @return
  */
 uint8_t find_in_structure_with_inf(
-    const double d_list[], const double distance
+    const double d_list[], const uint8_t d_list_size, const double distance, double interface_info[]
 )
 {
-    // find_in_structure(d_list, d_list_size, distance);
+    if (distance < 0.0)
+    {
+        interface_info[0] = 0.0;
+        interface_info[1] = distance;
+    } else
+    {
+        find_in_structure(d_list, d_list_size, distance, interface_info);
+    }
+
     return 0;
 }
 
@@ -679,7 +793,7 @@ double absorp_in_each_layer(
  * @param c_list
  * @return
  */
-double inc_group_layers(double n_list[], double d_list[], double c_list[])
+double inc_group_layers(double complex n_list[], double d_list[], double c_list[])
 {
     return 0.0;
 }
@@ -699,7 +813,12 @@ double inc_group_layers(double n_list[], double d_list[], double c_list[])
  * @return
  */
 double inc_tmm(
-    uint8_t pol, double n_list[], double d_list[], double c_list[], double th_0, double lam_vac
+    uint8_t pol,
+    double complex n_list[],
+    double d_list[],
+    double c_list[],
+    double th_0,
+    double lam_vac
 )
 {
     return 0.0;
@@ -728,7 +847,7 @@ double inc_absorp_in_each_layer(double inc_data)
  * @param inc_data
  * @return
  */
-double inc_find_absorp_analytic_fn(uint8_t layer, double inc_data)
+uint8_t inc_find_absorp_analytic_fn(uint8_t layer, double inc_data)
 {
-    return 0.0;
+    return 0;
 }
