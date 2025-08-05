@@ -14,29 +14,30 @@
 #include <math.h>
 #include "tmm_core.h"
 #include "tmm_absorp_fn.h"
+#include "tmm_coherent.h"
 
 
-/**
- * @brief asdfas
- *
- * This struct holds integer values for the x and y coordinates.
- */
-typedef struct {
-    double complex r;  // complex reflection amplitude (i.e. reflection coefficient)
-    double complex t;  // complex transmission amplitude (i.e. transmission coefficient)
-    double R;  // real reflectivity
-    double T;  // real transmissivity
-    uint8_t num_layers;
-    double power_entering;
-    double* vw_list;
-    double complex* kz_list;
-    double* th_list;
-    double pol;
-    double complex* n_list;
-    double* d_list;
-    double th_0;
-    double lam_vac;
-} CohTmmData;
+// /**
+//  * @brief asdfas
+//  *
+//  * This struct holds integer values for the x and y coordinates.
+//  */
+// typedef struct {
+//     double complex r;  // complex reflection amplitude (i.e. reflection coefficient)
+//     double complex t;  // complex transmission amplitude (i.e. transmission coefficient)
+//     double R;  // real reflectivity
+//     double T;  // real transmissivity
+//     uint8_t num_layers;
+//     double power_entering;
+//     double* vw_list;
+//     double complex* kz_list;
+//     double* th_list;
+//     double pol;
+//     double complex* n_list;
+//     double* d_list;
+//     double th_0;
+//     double lam_vac;
+// } CohTmmData;
 
 
 typedef struct {
@@ -236,15 +237,15 @@ double complex interface_t(
  *
  *
  * @param r
- * @param reflectivity
+ * @param R
  * @return
  */
-uint8_t R_from_r(const double complex r, double* reflectivity)
+uint8_t R_from_r(const double complex r, double* R)
 {
     // Method 1: Manually compute the modulus squared
     const double real_part = creal(r);
     const double imag_part = cimag(r);
-    *reflectivity = real_part * real_part + imag_part * imag_part;
+    *R = real_part * real_part + imag_part * imag_part;
 
     return 0;
 }
@@ -610,7 +611,7 @@ double unpolarized_RT(
  * @return
  */
 uint8_t position_resolved(
-    const uint8_t layer, double distance, double coh_tmm_data
+    const uint8_t layer, double distance, CohTmmData coh_tmm_data
 )
 {
     if (layer > 0) {}
@@ -764,7 +765,7 @@ uint8_t layer_starts(
  * @return
  */
 double absorp_in_each_layer(
-    double coh_tmm_data,
+    CohTmmData coh_tmm_data,
     const uint8_t num_layers,
     double final_answer[]
 )

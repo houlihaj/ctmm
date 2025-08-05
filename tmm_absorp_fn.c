@@ -7,6 +7,7 @@
 #include <complex.h>
 #include <math.h>
 #include "tmm_absorp_fn.h"
+#include "tmm_coherent.h"
 
 
 // /**
@@ -71,9 +72,17 @@ uint8_t AbsorpAnalyticFn_destroy(AbsorpAnalyticFn self)
  * @return
  */
 uint8_t fill_in(
-    AbsorpAnalyticFn self, double coh_tmm_data, int layer
+    // AbsorpAnalyticFn self, CohTmmData coh_tmm_data, int layer
+    AbsorpAnalyticFn* self
 )
 {
+    // Temporary!!!
+    self->a1 = 1.0;
+    self->d = 10.0;
+
+    self->A1 = 1.0 + 0.0 * I;
+    self->A2 = 1.2857 + 13.660 * I;  // Aluminum at 1.5 micron
+
     return 0;
 }
 
@@ -117,12 +126,12 @@ uint8_t run(AbsorpAnalyticFn self, const double z)
  * @param self
  * @return
  */
-uint8_t flip(AbsorpAnalyticFn self)
+uint8_t flip(AbsorpAnalyticFn* self)
 {
-    const double complex newA1 = self.A2 * exp(-self.a1 * self.d);
-    const double complex newA2 = self.A1 * exp(self.a1 * self.d);
-    self.A1 = newA1;
-    self.A2 = newA2;
+    const double complex newA1 = self->A2 * exp(-self->a1 * self->d);
+    const double complex newA2 = self->A1 * exp(self->a1 * self->d);
+    self->A1 = newA1;
+    self->A2 = newA2;
     // self.A3 = conj(self.A3 * exp(1j * self.a3 * self.d));
     return 0;
 }

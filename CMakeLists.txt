@@ -8,7 +8,9 @@ add_executable(${PROJECT_NAME}
         tmm_core.c
         tmm_core.h
         tmm_absorp_fn.c
-        tmm_absorp_fn.h)
+        tmm_absorp_fn.h
+        tmm_coherent.c
+        tmm_coherent.h)
 
 # Link with the math library (-lm)
 target_link_libraries(${PROJECT_NAME} m)

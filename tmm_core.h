@@ -32,7 +32,7 @@ uint8_t interface_r(
 // );
 //
 //
-// double R_from_r(const double r);
+uint8_t R_from_r(const double complex r, double* R);
 //
 //
 // double T_from_t(

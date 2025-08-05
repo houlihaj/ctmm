@@ -6,6 +6,9 @@
 #define TMM_ABSORP_FN_H
 
 
+#include "tmm_coherent.h"
+
+
 // // Define a struct for a Point in 2D space
 // struct Point {
 //     int x;
@@ -42,10 +45,10 @@
  * This struct holds integer values for the x and y coordinates.
  */
 typedef struct {
-    double complex d;
-    double complex a1;
-    double complex a2;
-    double complex a3;
+    double d;
+    double a1;
+    double a2;
+    double a3;
     double complex A1;
     double complex A2;
     double complex A3;
@@ -59,7 +62,8 @@ uint8_t AbsorpAnalyticFn_destroy(AbsorpAnalyticFn self);
 
 
 uint8_t fill_in(
-    AbsorpAnalyticFn self, double coh_tmm_data, int layer
+    // AbsorpAnalyticFn* self, CohTmmData coh_tmm_data, int layer
+    AbsorpAnalyticFn* self
 );
 
 
@@ -69,7 +73,7 @@ uint8_t copy(const AbsorpAnalyticFn self, AbsorpAnalyticFn a);
 uint8_t run(AbsorpAnalyticFn self, const double z);
 
 
-uint8_t flip(AbsorpAnalyticFn self);
+uint8_t flip(AbsorpAnalyticFn* self);
 
 
 uint8_t copy(const AbsorpAnalyticFn self, AbsorpAnalyticFn a);

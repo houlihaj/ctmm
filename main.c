@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <complex.h>
+
+#include "tmm_absorp_fn.h"
 #include "tmm_core.h"
 
 
@@ -26,7 +28,23 @@ int main(int argc, char** argv) {
     interface_r(0, eta1, eta2, th_1, th_2_guess, &r);
     printf("reflection coefficient, r = %.3f + %.3fi\n", creal(r), cimag(r));
 
-    // Compute reflectivity
+    // Compute reflectivity R
+    double R;
+    R_from_r(r, &R);
+    printf("reflectivity, R = %.3f\n", R);
+
+    // Test AbsorpAnalyticFn
+    AbsorpAnalyticFn absorp_fn;
+    fill_in(&absorp_fn);
+    printf(
+        "absorp_fn.A1, absorp_fn.A2: (%.3f + %.3fi, %.3f + %.3fi)\n",
+        creal(absorp_fn.A1), cimag(absorp_fn.A1), creal(absorp_fn.A2), cimag(absorp_fn.A2)
+    );
+    flip(&absorp_fn);
+    printf(
+        "absorp_fn.A1, absorp_fn.A2: (%.3f + %.3fi, %.3f + %.3fi)\n",
+        creal(absorp_fn.A1), cimag(absorp_fn.A1), creal(absorp_fn.A2), cimag(absorp_fn.A2)
+    );
 
     return 0;
 }
