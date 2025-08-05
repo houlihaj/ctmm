@@ -23,7 +23,7 @@ typedef struct {
     double power_entering;
     double* vw_list;
     double complex* kz_list;
-    double* th_list;
+    double complex* th_list;
     double pol;
     double complex* n_list;
     double* d_list;

@@ -20,7 +20,7 @@ uint8_t CohTmmData_create(CohTmmData* self, const uint8_t num_layers)
 
     self->vw_list = malloc(num_layers * sizeof(double));
     self->kz_list = malloc(num_layers * sizeof(double complex));
-    self->th_list = malloc(num_layers * sizeof(double));
+    self->th_list = malloc(num_layers * sizeof(double complex));
     self->n_list = malloc(num_layers * sizeof(double complex));
     self->d_list = malloc(num_layers * sizeof(double));
 

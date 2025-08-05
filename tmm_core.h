@@ -25,13 +25,13 @@ uint8_t snell(const double n_1, const double n_2, const double th_1, double* th_
 uint8_t interface_r(
     uint8_t polarization, double complex n_i, double complex n_f, double th_i, double th_f, double complex* r
 );
-//
-//
-// double interface_t(
-//     uint8_t polarization, double n_i, double n_f, double th_i, double th_f
-// );
-//
-//
+
+
+uint8_t interface_t(
+    uint8_t polarization, double complex n_i, double complex n_f, double th_i, double th_f, double complex* t
+);
+
+
 uint8_t R_from_r(const double complex r, double* R);
 //
 //

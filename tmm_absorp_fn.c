@@ -96,17 +96,11 @@ uint8_t fill_in(
  */
 uint8_t copy(const AbsorpAnalyticFn* self, AbsorpAnalyticFn* a)
 {
-    // a.A1 = self.A1;
     a->A1 = self->A1;
-    // a.A2 = self.A2;
     a->A2 = self->A2;
-    // a.A2 = self.A3;
     a->A2 = self->A3;
-    // a.a1 = self.a1;
     a->a1 = self->a1;
-    // a.a3 = self.a3;
     a->a3 = self->a3;
-    // a.d = self.d;
     a->d = self->d;
     return 0;
 }
@@ -140,7 +134,6 @@ uint8_t flip(AbsorpAnalyticFn* self)
     const double complex newA2 = self->A1 * exp(self->a1 * self->d);
     self->A1 = newA1;
     self->A2 = newA2;
-    // self.A3 = conj(self.A3 * exp(1j * self.a3 * self.d));
     self->A3 = conj(self->A3 * exp(I * self->a3 * self->d));
     return 0;
 }
@@ -155,11 +148,8 @@ uint8_t flip(AbsorpAnalyticFn* self)
  */
 uint8_t scale(AbsorpAnalyticFn* self, const double factor)
 {
-    // self.A1 *= factor;
     self->A1 *= factor;
-    // self.A2 *= factor;
     self->A2 *= factor;
-    // self.A3 *= factor;
     self->A3 *= factor;
     return 0;
 }
@@ -174,11 +164,8 @@ uint8_t scale(AbsorpAnalyticFn* self, const double factor)
  */
 uint8_t add(AbsorpAnalyticFn* self, const AbsorpAnalyticFn* b)
 {
-    // self.A1 += b.A1;
     self->A1 += b->A1;
-    // self.A2 += b.A2;
     self->A2 += b->A2;
-    // self.A3 += b.A3;
     self->A3 += b->A3;
     return 0;
 }

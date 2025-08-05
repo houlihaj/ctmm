@@ -17,6 +17,14 @@
 #include "tmm_core.h"
 
 
+typedef enum
+{
+    SUCCESS,
+    ERROR,
+    NOT_IMPLEMENTED
+} TmmStatus;
+
+
 // /**
 //  * @brief asdfas
 //  *
@@ -143,7 +151,7 @@ uint8_t list_snell(
     const double complex n_list[],
     const uint8_t n_list_size,
     const double th_0,
-    double angles[]
+    double complex angles[]
 )
 {
     const double n_list_0 = n_list[0];
@@ -199,35 +207,38 @@ uint8_t interface_r(
  *
  *
  *
- * @param
- * @param
+ * @param polarization
+ * @param n_i
+ * @param n_f
+ * @param th_i
+ * @param th_f
+ * @param t
  * @return
  */
-double complex interface_t(
+uint8_t interface_t(
     const uint8_t polarization,
     const double complex n_i,
     const double complex n_f,
     const double th_i,
-    const double th_f
+    const double th_f,
+    double complex* t
 )
 {
-    double complex transmission;  // complex transmission coefficient (i.e. transmission amplitude)
-
     if (polarization == 0)  // s-polarization
     {
-        transmission = (
+        *t = (
             2 * n_i * cos(th_i)
             / ( n_i * cos(th_i) + n_f * cos(th_f) )
         );
     } else  // p-polarization
     {
-        transmission = (
+        *t = (
             2 * n_i * cos(th_i)
             / ( n_f * cos(th_i) + n_i * cos(th_f) )
         );
     }
 
-    return transmission;
+    return 0;
 }
 
 
@@ -379,9 +390,8 @@ double interface_T(
     const double th_f
 )
 {
-    const double complex t = (
-        interface_t(polarization, n_i, n_f, th_i, th_f)
-    );
+    double complex t;
+    interface_t(polarization, n_i, n_f, th_i, th_f, &t);
     double T;
     T_from_t(polarization, t, n_i, n_f, th_i, th_f, &T);
     return T;
@@ -412,13 +422,23 @@ uint8_t coh_tmm(
     CohTmmData* coh_tmm_data
 )
 {
+    // d_list must start and end with INFINITY
+    if (d_list[0] != INFINITY || d_list[num_layers] != INFINITY)
+    {
+        // return with error
+        return 1;
+    }
+
     // is_forward_angle();
 
-    double th_list[num_layers];
+    // th_list is a list with, for each layer, the angle that the light
+    // travels through the layer. Computed with Snell's law. Note that
+    // the "angles" may be complex!
+    double complex th_list[num_layers];
     list_snell(n_list, num_layers, th_0, th_list);
 
-    // kz is the z-component of (complex) angular wavevector for forward-moving
-    // wave. Positive imaginary part means decaying.
+    // kz is the z-component of (complex) angular wavevector for
+    // forward-moving wave. Positive imaginary part means decaying.
     double complex kz_list[num_layers];
     for (int i = 0; i < num_layers; i++)
     {
@@ -444,9 +464,9 @@ uint8_t coh_tmm(
         if ( cimag(delta[i]) > 35 )
         {
             delta[i] = creal(delta[i]) + cimag(35);
-        }
 
-        // TODO: Must add opacity check and warning!!!
+            // TODO: Must add opacity check and warning!!!
+        }
     }
 
     // t_list[i,j] and r_list[i,j] are transmission and reflection amplitudes,
@@ -456,11 +476,11 @@ uint8_t coh_tmm(
     double complex r_list[num_layers][num_layers];
     for (int i = 0; i < num_layers - 1; i++)
     {
-        t_list[i][i + 1] = (
-            interface_t(
-                pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]
-            )
+        double complex t;
+        interface_t(
+            pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1], &t
         );
+        t_list[i][i + 1] = t;
 
         double complex r;
         interface_r(
@@ -478,20 +498,32 @@ uint8_t coh_tmm(
     double complex M_list[num_layers][2][2];
     for (int i = 1; i < num_layers - 1; i++)
     {
+
         continue;
     }
     double complex Mtilde[2][2];
     make_2x2_array(1, 0, 0, 1, Mtilde);
+    for (int i = 1; i < num_layers - 1; i++)
+    {
+        // TODO: Mtilde = np.dot(Mtilde, M_list[i])
+        continue;
+    }
 
     // Net complex transmission and reflection amplitudes
     double complex r = Mtilde[1][0] / Mtilde[0][0];
     double complex t = 1 / Mtilde[0][0];
 
-    // vw_list[n] = [v_n, w_n]. v_0 and w_0 are undefined because the 0th medium
-    // has no left interface.
+    // vw_list[n] = [v_n, w_n]. v_0 and w_0 are undefined because the 0th
+    // medium has no left interface.
     double complex vw_list[num_layers][2];
-    // TODO: vw = array([[t],[0]])
-    // TODO: vw_list[-1,:] = np.transpose(vw)
+    // 2x1 array (2 rows, 1 column)
+    double complex vw[2][1] = {{t},{0.0 + 0.0 * I}};
+
+    // // TODO: vw_list[-1,:] = np.transpose(vw)
+    // // Assign the transpose of vw to the last row of vw_list
+    // vw_list[num_layers - 1][0] = vw[0];
+    // vw_list[num_layers - 1][1] = vw[1];
+
     // TODO: must confirm loop is implemented correctly
     for (int i = num_layers - 2; i > 0; i--)
     {
@@ -512,6 +544,16 @@ uint8_t coh_tmm(
     );
     double power_entering;
     power_entering_from_r(pol, r, n_list[0], th_0, &power_entering);
+
+    // Store the data in the struct
+    coh_tmm_data->r = r;
+    coh_tmm_data->t = t;
+    coh_tmm_data->R = R;
+    coh_tmm_data->T = T;
+    coh_tmm_data->power_entering = power_entering;
+    coh_tmm_data->pol = pol;
+    coh_tmm_data->th_0 = th_0;
+    coh_tmm_data->lam_vac = lam_vac;
 
     return 0;
 }
@@ -578,13 +620,22 @@ uint8_t ellips(
     const uint8_t num_layers,
     const double th_0,
     const double lam_vac,
-    CohTmmData* coh_tmm_data
+    EllipsData* ellips_data
 )
 {
-    uint8_t s_data = coh_tmm(0, n_list, d_list, num_layers, th_0, lam_vac, coh_tmm_data);
-    uint8_t p_data = coh_tmm(1, n_list, d_list, num_layers, th_0, lam_vac, coh_tmm_data);
-    // TODO: finish implementation!!!
-    EllipsData ellips_data;
+    CohTmmData coh_tmm_data_s;
+    coh_tmm(0, n_list, d_list, num_layers, th_0, lam_vac, &coh_tmm_data_s);
+    const double complex rs = coh_tmm_data_s.r;
+
+    CohTmmData coh_tmm_data_p;
+    coh_tmm(1, n_list, d_list, num_layers, th_0, lam_vac, &coh_tmm_data_p);
+    const double complex rp = coh_tmm_data_p.r;
+
+    ellips_data->psi = (
+        atan( creal(rp / rs) * creal(rp / rs) + cimag(rp / rs) * cimag(rp / rs) )
+    );
+    // TODO: {'Delta': np.angle(-rp/rs)}
+    ellips_data->delta = -rp / rs;
     return 0;
 }
 
@@ -597,18 +648,34 @@ uint8_t ellips(
  * @param num_layers
  * @param th_0
  * @param lam_vac
+ * @param R
+ * @param T
  * @return
  */
-double unpolarized_RT(
+uint8_t unpolarized_RT(
     const double complex n_list[],
     const double d_list[],
     const uint8_t num_layers,
     const double th_0,
-    const double lam_vac
+    const double lam_vac,
+    double* R,
+    double* T
 )
 {
-    // TODO: finish implementation!!!
-    return 0.0;
+    CohTmmData coh_tmm_data_s;
+    coh_tmm(0, n_list, d_list, num_layers, th_0, lam_vac, &coh_tmm_data_s);
+    const double Rs = coh_tmm_data_s.R;
+    const double Ts = coh_tmm_data_s.T;
+
+    CohTmmData coh_tmm_data_p;
+    coh_tmm(1, n_list, d_list, num_layers, th_0, lam_vac, &coh_tmm_data_p);
+    const double Rp = coh_tmm_data_p.R;
+    const double Tp = coh_tmm_data_p.T;
+
+    *R = (Rs + Rp) / 2;
+    *T = (Ts + Tp) / 2;
+
+    return 0;
 }
 
 
@@ -621,15 +688,21 @@ double unpolarized_RT(
  * @return
  */
 uint8_t position_resolved(
-    const uint8_t layer, double distance, CohTmmData coh_tmm_data
+    const uint8_t layer, double distance, CohTmmData* coh_tmm_data
 )
 {
     if (layer > 0) {}
-    else {}
+    else
+    {
+        const double complex v = 1;
+        const double complex w = coh_tmm_data->r;
+    }
+    const double th_0 = coh_tmm_data->th_0;
+    const double pol = coh_tmm_data->pol;
 
     // Amplitude of forward-moving wave is Ef, backwards is Eb
-    // TODO: Ef = v * exp(1j * kz * distance)
-    // TODO: Eb = w * exp(-1j * kz * distance)
+    // TODO: Ef = v * exp(1 * I * kz * distance)
+    // TODO: Eb = w * exp(-1 * I * kz * distance)
 
     // // Poynting vector
     // if (pol == 0)  // s-polarization
@@ -723,7 +796,10 @@ uint8_t find_in_structure(
  * @return
  */
 uint8_t find_in_structure_with_inf(
-    const double d_list[], const uint8_t d_list_size, const double distance, double interface_info[]
+    const double d_list[],
+    const uint8_t d_list_size,
+    const double distance,
+    double interface_info[]
 )
 {
     if (distance < 0.0)
@@ -754,7 +830,8 @@ uint8_t layer_starts(
     const double d_list[], const uint8_t d_list_size, double final_answer[]
 )
 {
-    final_answer[0] = 0.0;  // TODO: replace with -inf
+    // Confirm that -1 * INFINITY if equivalent to -np.inf
+    final_answer[0] = -1 * INFINITY;  // TODO: replace with -inf
     final_answer[1] = 0.0;
     for (int i = 2; i < d_list_size; i++)
     {
@@ -775,13 +852,15 @@ uint8_t layer_starts(
  * @return
  */
 double absorp_in_each_layer(
-    CohTmmData coh_tmm_data,
+    CohTmmData* coh_tmm_data,
     const uint8_t num_layers,
     double final_answer[]
 )
 {
     double power_entering_each_layer[num_layers];
     power_entering_each_layer[0] = 1.0;
+    power_entering_each_layer[1] = coh_tmm_data->power_entering;
+    power_entering_each_layer[num_layers] = coh_tmm_data->T;
 
     for (int i = 2; i < num_layers - 1; i++)
     {
