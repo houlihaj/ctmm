@@ -7,6 +7,7 @@
 #include <complex.h>
 
 #include "tmm_absorp_fn.h"
+#include "tmm_coherent.h"
 #include "tmm_core.h"
 
 
@@ -45,6 +46,19 @@ int main(int argc, char** argv) {
         "absorp_fn.A1, absorp_fn.A2: (%.3f + %.3fi, %.3f + %.3fi)\n",
         creal(absorp_fn.A1), cimag(absorp_fn.A1), creal(absorp_fn.A2), cimag(absorp_fn.A2)
     );
+
+    // Test CohTmmData instantiation, memory allocation, and deallocation
+    CohTmmData coh_tmm_data;  // allocate struct in outer scope
+    const uint8_t num_layers = 3;
+    CohTmmData_create(&coh_tmm_data, num_layers);
+
+    coh_tmm_data.r = r;  // set reflection amplitude
+    printf("reflection coefficient, r = %.3f + %.3fi\n", creal(coh_tmm_data.r), cimag(coh_tmm_data.r));
+
+    coh_tmm_data.R = R;  // set reflectivity
+    printf("reflectivity, R = %.3f\n", coh_tmm_data.R);
+
+    CohTmmData_destroy(&coh_tmm_data);
 
     return 0;
 }

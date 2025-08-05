@@ -32,4 +32,10 @@ typedef struct {
 } CohTmmData;
 
 
+uint8_t CohTmmData_create(CohTmmData* self, uint8_t num_layers);
+
+
+uint8_t CohTmmData_destroy(CohTmmData* self);
+
+
 #endif //TMM_COHERENT_H

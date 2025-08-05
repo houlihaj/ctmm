@@ -62,24 +62,24 @@ uint8_t AbsorpAnalyticFn_destroy(AbsorpAnalyticFn self);
 
 
 uint8_t fill_in(
-    // AbsorpAnalyticFn* self, CohTmmData coh_tmm_data, int layer
+    // AbsorpAnalyticFn* self, CohTmmData* coh_tmm_data, int layer
     AbsorpAnalyticFn* self
 );
 
 
-uint8_t copy(const AbsorpAnalyticFn self, AbsorpAnalyticFn a);
+uint8_t copy(const AbsorpAnalyticFn* self, AbsorpAnalyticFn* a);
 
 
-uint8_t run(AbsorpAnalyticFn self, const double z);
+uint8_t run(AbsorpAnalyticFn* self, const double z);
 
 
 uint8_t flip(AbsorpAnalyticFn* self);
 
 
-uint8_t copy(const AbsorpAnalyticFn self, AbsorpAnalyticFn a);
+uint8_t scale(AbsorpAnalyticFn* self, const double factor);
 
 
-uint8_t add(AbsorpAnalyticFn self, const AbsorpAnalyticFn b);
+uint8_t add(AbsorpAnalyticFn* self, const AbsorpAnalyticFn* b);
 
 
 #endif //TMM_ABSORP_FN_H

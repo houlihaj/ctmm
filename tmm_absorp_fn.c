@@ -72,7 +72,7 @@ uint8_t AbsorpAnalyticFn_destroy(AbsorpAnalyticFn self)
  * @return
  */
 uint8_t fill_in(
-    // AbsorpAnalyticFn self, CohTmmData coh_tmm_data, int layer
+    // AbsorpAnalyticFn* self, CohTmmData* coh_tmm_data, int layer
     AbsorpAnalyticFn* self
 )
 {
@@ -94,14 +94,20 @@ uint8_t fill_in(
  * @param a The AbsorpAnalyticFn copy
  * @return
  */
-uint8_t copy(const AbsorpAnalyticFn self, AbsorpAnalyticFn a)
+uint8_t copy(const AbsorpAnalyticFn* self, AbsorpAnalyticFn* a)
 {
-    a.A1 = self.A1;
-    a.A2 = self.A2;
-    a.A2 = self.A3;
-    a.a1 = self.a1;
-    a.a3 = self.a3;
-    a.d = self.d;
+    // a.A1 = self.A1;
+    a->A1 = self->A1;
+    // a.A2 = self.A2;
+    a->A2 = self->A2;
+    // a.A2 = self.A3;
+    a->A2 = self->A3;
+    // a.a1 = self.a1;
+    a->a1 = self->a1;
+    // a.a3 = self.a3;
+    a->a3 = self->a3;
+    // a.d = self.d;
+    a->d = self->d;
     return 0;
 }
 
@@ -114,14 +120,16 @@ uint8_t copy(const AbsorpAnalyticFn self, AbsorpAnalyticFn a)
  * @param z
  * @return
  */
-uint8_t run(AbsorpAnalyticFn self, const double z)
+uint8_t run(AbsorpAnalyticFn* self, const double z)
 {
     return 0;
 }
 
 
 /**
- * @brief
+ * @brief Flip the function front-to-back
+ *
+ * To describe a(d-z) instead of a(z), where d is layer thickness.
  *
  * @param self
  * @return
@@ -133,6 +141,7 @@ uint8_t flip(AbsorpAnalyticFn* self)
     self->A1 = newA1;
     self->A2 = newA2;
     // self.A3 = conj(self.A3 * exp(1j * self.a3 * self.d));
+    self->A3 = conj(self->A3 * exp(I * self->a3 * self->d));
     return 0;
 }
 
@@ -144,11 +153,14 @@ uint8_t flip(AbsorpAnalyticFn* self)
  * @param factor
  * @return
  */
-uint8_t scale(AbsorpAnalyticFn self, const double factor)
+uint8_t scale(AbsorpAnalyticFn* self, const double factor)
 {
-    self.A1 *= factor;
-    self.A2 *= factor;
-    self.A3 *= factor;
+    // self.A1 *= factor;
+    self->A1 *= factor;
+    // self.A2 *= factor;
+    self->A2 *= factor;
+    // self.A3 *= factor;
+    self->A3 *= factor;
     return 0;
 }
 
@@ -160,10 +172,13 @@ uint8_t scale(AbsorpAnalyticFn self, const double factor)
  * @param b Another compatible absorption analytical function
  * @return
  */
-uint8_t add(AbsorpAnalyticFn self, const AbsorpAnalyticFn b)
+uint8_t add(AbsorpAnalyticFn* self, const AbsorpAnalyticFn* b)
 {
-    self.A1 += b.A1;
-    self.A2 += b.A2;
-    self.A3 += b.A3;
+    // self.A1 += b.A1;
+    self->A1 += b->A1;
+    // self.A2 += b.A2;
+    self->A2 += b->A2;
+    // self.A3 += b.A3;
+    self->A3 += b->A3;
     return 0;
 }

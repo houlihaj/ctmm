@@ -12,9 +12,9 @@
 #include <stdbool.h>
 #include <complex.h>
 #include <math.h>
-#include "tmm_core.h"
 #include "tmm_absorp_fn.h"
 #include "tmm_coherent.h"
+#include "tmm_core.h"
 
 
 // /**
@@ -399,6 +399,7 @@ double interface_T(
  * @param num_layers
  * @param th_0 The angle of incidence
  * @param lam_vac The vacuum wavelength of the light
+ * @param coh_tmm_data Pass by reference from outer scope
  * @return
  */
 uint8_t coh_tmm(
@@ -407,7 +408,8 @@ uint8_t coh_tmm(
     const double d_list[],
     const uint8_t num_layers,
     const double th_0,
-    const double lam_vac
+    const double lam_vac,
+    CohTmmData* coh_tmm_data
 )
 {
     // is_forward_angle();
@@ -520,8 +522,13 @@ uint8_t coh_tmm(
  *
  *
  *
- * @param
- * @param
+ * @param pol
+ * @param n_list
+ * @param d_list
+ * @param num_layers
+ * @param th_0
+ * @param lam_vac
+ * @param coh_tmm_data Pass by reference from outer scope
  * @return
  */
 uint8_t coh_tmm_reverse(
@@ -530,7 +537,8 @@ uint8_t coh_tmm_reverse(
     const double d_list[],
     const uint8_t num_layers,
     const double th_0,
-    const double lam_vac
+    const double lam_vac,
+    CohTmmData* coh_tmm_data
 )
 {
     // TODO: confirm n_list[-1] and n_list[num_layers] is equivalent
@@ -545,7 +553,7 @@ uint8_t coh_tmm_reverse(
         d_list_rev[i] = d_list[num_layers - i];
     }
 
-    coh_tmm(pol, n_list_rev, d_list_rev, num_layers, th_f, lam_vac);
+    coh_tmm(pol, n_list_rev, d_list_rev, num_layers, th_f, lam_vac, coh_tmm_data);
 
     return 0;
 }
@@ -561,6 +569,7 @@ uint8_t coh_tmm_reverse(
  * @param num_layers
  * @param th_0
  * @param lam_vac
+ * @param coh_tmm_data Pass by reference from outer scope
  * @return
  */
 uint8_t ellips(
@@ -568,11 +577,12 @@ uint8_t ellips(
     const double d_list[],
     const uint8_t num_layers,
     const double th_0,
-    const double lam_vac
+    const double lam_vac,
+    CohTmmData* coh_tmm_data
 )
 {
-    uint8_t s_data = coh_tmm(0, n_list, d_list, num_layers, th_0, lam_vac);
-    uint8_t p_data = coh_tmm(1, n_list, d_list, num_layers, th_0, lam_vac);
+    uint8_t s_data = coh_tmm(0, n_list, d_list, num_layers, th_0, lam_vac, coh_tmm_data);
+    uint8_t p_data = coh_tmm(1, n_list, d_list, num_layers, th_0, lam_vac, coh_tmm_data);
     // TODO: finish implementation!!!
     EllipsData ellips_data;
     return 0;
