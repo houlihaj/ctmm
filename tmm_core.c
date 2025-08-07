@@ -60,8 +60,19 @@ typedef struct {
 } EllipsData;
 
 
+typedef struct {
+    double complex poyn;
+    double complex absor;
+    double complex Ex;
+    double complex Ey;
+    double complex Ez;
+} PositionResolvedData;
+
+
 /**
  * @brief Makes a 2x2 array of [[a,b],[c,d]]
+ *
+ * Done!!!
  *
  * Must declare the matrix in the outer scope and pass it into
  * this function for initialization of the elements
@@ -93,6 +104,8 @@ uint8_t make_2x2_array(
 /**
  * @brief Compute whether-or-not this is the forward-traveling wave
  *
+ * Done!!!
+ *
  * @param n Medium with complex refractive index, n
  * @param theta Angle of incidence
  * @param answer Pass by reference from outer scope
@@ -102,10 +115,6 @@ uint8_t is_forward_angle(
     const double complex n, const double theta, bool* answer
 )
 {
-    // TODO: DBL_EPSILON
-
-    // bool answer;
-
     const double complex ncostheta = n * cos(theta);
 
     if ( fabs( cimag(ncostheta) ) > 100.0 * DBL_EPSILON )
@@ -193,6 +202,8 @@ uint8_t is_forward_angle(
 /**
  * @brief Return the angle theta in layer 2 with refractive index n_2
  *
+ * Done!!!
+ *
  * @param n_1
  * @param n_2
  * @param th_1
@@ -201,18 +212,13 @@ uint8_t is_forward_angle(
  */
 uint8_t snell(
     const double n_1,
-    const double n_2,
+    const double complex n_2,
     const double th_1,
     double* th_2_guess
 )
 {
-    // *th_2_guess = asin(n_1 * sin(th_1) / n_2);  // units of rad
-
-    // TODO: must make n_2 complex rather than this intermediate step
-    const double complex eta2 = n_2 + 0.0 * I;
-
     bool answer;
-    is_forward_angle(eta2, *th_2_guess, &answer);  // must de-reference th_2_guess
+    is_forward_angle(n_2, *th_2_guess, &answer);  // must de-reference th_2_guess
 
     if ( answer )
     {
@@ -229,6 +235,8 @@ uint8_t snell(
 /**
  * @brief
  *
+ * Done!!!
+ *
  * @param n_list
  * @param n_list_size
  * @param th_0
@@ -242,12 +250,32 @@ uint8_t list_snell(
     double complex angles[]
 )
 {
+    // Important that the arcsin here is numpy.lib.scimath.arcsin, not
+    // numpy.arcsin! (They give different results e.g. for arcsin(2).)
     const double n_list_0 = n_list[0];
     for (uint8_t i = 0; i < n_list_size; i++)
     {
         // TODO: May have to do creal(n_list_0) instead of n_list_0
         angles[i] = asin( n_list_0 * sin(th_0) / n_list[i] );
     }
+
+    // The first and last entry need to be the forward angle (the intermediate
+    // layers don't matter, see https://arxiv.org/abs/1603.02720 Section 5)
+    bool answer;
+    is_forward_angle(n_list[0], angles[0], &answer);
+    if (!answer)
+    {
+        double complex angle = angles[0];
+        angles[0] = PI - angle;
+    }
+
+    is_forward_angle(n_list[n_list_size - 1], angles[n_list_size - 1], &answer);
+    if (!answer)
+    {
+        double complex angle = angles[n_list_size - 1];
+        angles[n_list_size - 1] = PI - angle;
+    }
+
     return 0;
 }
 
@@ -363,7 +391,7 @@ uint8_t R_from_r(const double complex r, double* R)
  * @param n_f
  * @param th_i
  * @param th_f
- * @param transmissivity Pass by reference from outer scope
+ * @param T Pass by reference from outer scope
  * @return
  */
 uint8_t T_from_t(
@@ -373,24 +401,22 @@ uint8_t T_from_t(
     const double complex n_f,
     const double th_i,
     const double th_f,
-    double* transmissivity
+    double* T
 )
 {
     // Method 1: Manually compute the modulus squared
     const double real_part = creal(t);
     const double imag_part = cimag(t);
 
-    // double transmissivity;
-
     if (pol == 0)  // s-polarization
     {
-        *transmissivity = (
+        *T = (
             (real_part * real_part + imag_part * imag_part)
             * ( creal( n_f * cos(th_f) ) / creal( n_i * cos(th_i) ) )
         );
     } else  // p-polarization
     {
-        *transmissivity = (
+        *T = (
             (real_part * real_part + imag_part * imag_part)
             * ( creal( n_f * conj(cos(th_f)) ) / creal( n_i * conj(cos(th_i)) ) )
         );
@@ -440,58 +466,59 @@ uint8_t power_entering_from_r(
 
 
 /**
- * @brief
+ * @brief Fraction of light intensity reflected at an interface
  *
- *
+ * Done!!!
  *
  * @param
  * @param
  * @return
  */
-double interface_R(
+uint8_t interface_R(
     const uint8_t polarization,
     const double complex n_i,
     const double complex n_f,
     const double th_i,
-    const double th_f
+    const double th_f,
+    double* R
 )
 {
     double complex r;
     interface_r(polarization, n_i, n_f, th_i, th_f, &r);
-
-    double R;
-    R_from_r(r, &R);
-    return R;
+    R_from_r(r, R);
+    return 0;
 }
 
 
 /**
- * @brief
+ * @brief Fraction of light intensity transmitted at an interface
+ *
+ * Done!!!
  *
  * @param
  * @param
  * @return
  */
-double interface_T(
+uint8_t interface_T(
     const uint8_t polarization,
     const double complex n_i,
     const double complex n_f,
     const double th_i,
-    const double th_f
+    const double th_f,
+    double* T
 )
 {
     double complex t;
     interface_t(polarization, n_i, n_f, th_i, th_f, &t);
-    double T;
-    T_from_t(polarization, t, n_i, n_f, th_i, th_f, &T);
-    return T;
+    T_from_t(polarization, t, n_i, n_f, th_i, th_f, T);
+    return 0;
 }
 
 
 /**
  * @brief Main "coherent transfer matrix method" computation.
  *
- *
+ * TODO: Not Implemented!!!
  *
  * @param pol Light polarization, "s" or "p"
  * @param n_list
@@ -513,7 +540,7 @@ uint8_t coh_tmm(
 )
 {
     // d_list must start and end with INFINITY
-    if (d_list[0] != INFINITY || d_list[num_layers] != INFINITY)
+    if (d_list[0] != INFINITY || d_list[num_layers - 1] != INFINITY)
     {
         // return with error
         return 1;
@@ -645,11 +672,11 @@ uint8_t coh_tmm(
     // incoming light power.
     double R;
     R_from_r(r, &R);
-    // TODO: confirm n_list[-1] and n_list[num_layers] are equivalent
-    // TODO: confirm th_list[-1] and th_list[num_layers] are equivalent
+    // TODO: confirm n_list[-1] and n_list[num_layers - 1] are equivalent
+    // TODO: confirm th_list[-1] and th_list[num_layers - 1] are equivalent
     double T;
     T_from_t(
-        pol, t, n_list[0], n_list[num_layers], th_list[0], th_list[num_layers], &T
+        pol, t, n_list[0], n_list[num_layers - 1], th_list[0], th_list[num_layers - 1], &T
     );
     double power_entering;
     power_entering_from_r(pol, r, n_list[0], th_0, &power_entering);
@@ -678,7 +705,7 @@ uint8_t coh_tmm(
 /**
  * @brief Reverses the order of the stack and then runs coh_tmm()
  *
- *
+ * Done!!!
  *
  * @param pol
  * @param n_list
@@ -699,16 +726,16 @@ uint8_t coh_tmm_reverse(
     CohTmmData* coh_tmm_data
 )
 {
-    // TODO: confirm n_list[-1] and n_list[num_layers] is equivalent
+    // TODO: confirm n_list[-1] and n_list[num_layers - 1] is equivalent
     double th_f;
-    snell(n_list[0], n_list[num_layers], th_0, &th_f);
+    snell(n_list[0], n_list[num_layers - 1], th_0, &th_f);
 
     double complex n_list_rev[num_layers];
     double d_list_rev[num_layers];
     for (int i = 0; i < num_layers; i++)
     {
-        n_list_rev[i] = n_list[num_layers - i];
-        d_list_rev[i] = d_list[num_layers - i];
+        n_list_rev[i] = n_list[(num_layers - 1) - i];
+        d_list_rev[i] = d_list[(num_layers - 1) - i];
     }
 
     coh_tmm(pol, n_list_rev, d_list_rev, num_layers, th_f, lam_vac, coh_tmm_data);
@@ -719,6 +746,8 @@ uint8_t coh_tmm_reverse(
 
 /**
  * @brief Calculates ellipsometric parameters, in radians.
+ *
+ * Done!!!
  *
  * Warning: Conventions differ. You may need to subtract pi/2 or whatever.
  *
@@ -750,8 +779,7 @@ uint8_t ellips(
     ellips_data->psi = (
         atan( creal(rp / rs) * creal(rp / rs) + cimag(rp / rs) * cimag(rp / rs) )
     );
-    // TODO: {'Delta': np.angle(-rp/rs)}
-    ellips_data->delta = -rp / rs;
+    ellips_data->delta = carg(-rp / rs);  // carg to compute argument of a complex number
     return 0;
 }
 
@@ -800,69 +828,118 @@ uint8_t unpolarized_RT(
 /**
  * @brief Calculate the Poynting vector, absorbed energy density, and E-field at a specific location.
  *
+ * TODO: Not Implemented!!!
+ *
+ * TODO: must finished implementation!!! Special attention
+ * TODO: to absorption computation
+ *
  * @param layer
  * @param distance
  * @param coh_tmm_data
+ * @param position_resolved_data
  * @return
  */
 uint8_t position_resolved(
-    const uint8_t layer, double distance, CohTmmData* coh_tmm_data
+    const uint8_t layer,
+    double distance,
+    CohTmmData* coh_tmm_data,
+    PositionResolvedData* position_resolved_data
 )
 {
-    if (layer > 0) {}
+    double complex v;
+    double complex w;
+
+    if (layer > 0)
+    {
+        // TODO: v,w = coh_tmm_data['vw_list'][layer]
+        // const double complex v = coh_tmm_data->vw_list[layer][0];
+        // const double complex w = coh_tmm_data->vw_list[layer][1];
+
+        // Temporary so I can implement the rest of the function
+        v = coh_tmm_data->r;
+        w = 1;
+    }
     else
     {
-        const double complex v = 1;
-        const double complex w = coh_tmm_data->r;
+        v = 1;
+        w = coh_tmm_data->r;
     }
+    double complex kz = coh_tmm_data->kz_list[layer];
+    double complex th = coh_tmm_data->th_list[layer];
+    double complex n = coh_tmm_data->n_list[layer];
+    double complex n_0 = coh_tmm_data->n_list[0];
     const double th_0 = coh_tmm_data->th_0;
     const double pol = coh_tmm_data->pol;
 
-    // Amplitude of forward-moving wave is Ef, backwards is Eb
-    // TODO: Ef = v * exp(1 * I * kz * distance)
-    // TODO: Eb = w * exp(-1 * I * kz * distance)
+    if (
+        !(
+            layer >= 1 && 0 <= distance <= coh_tmm_data->d_list[layer]
+            || layer == 0 && distance <= 0
+        )
+    )
+    {
+        return 1;
+    }
 
-    // // Poynting vector
-    // if (pol == 0)  // s-polarization
-    // {
-    //     poyn = (
-    //         creal( n * cos(th) * conj(Ef + Eb) * (Ef - Eb) )
-    //         / creal( n_0 * cos(th_0) )
-    //     );
-    // } else  // p-polarization
-    // {
-    //     poyn = (
-    //         creal( n * conj( cos(th) ) * (Ef + eb) * conj( Ef - Eb ) )
-    //         / creal( n_0 * conj( cos(th_0) ) )
-    //     );
-    // }
-    //
-    // // Absorbed energy density
-    // if (pol == 0)  // s-polarization
-    // {
-    //     absor = (
-    //         cimag(  ) / creal(  )
-    //     );
-    // } else  // p-polarization
-    // {
-    //     absor = (
-    //         cimag( n * conj( cos(th) ) * ( kz * abs(Ef - Eb) ** 2 - conj(kz) * abs(Ef + Eb) ** 2 ) )
-    //         / creal( n_0 * conj( cos(th_0) ) )
-    //     );
-    // }
-    //
-    // // Electric field
-    // if (pol == 0)  // s-polarization
-    // {
-    //     double Ex = 0.0;
-    //     double Ey = Ef + Eb;
-    //     double Ez = 0.0;
-    // } else  // p-polarization
-    // {
-    //     double Ex = (Ef - Eb) * cos(th);
-    //     double Ey = 0.0;
-    //     double Ez = (-Ef - Eb) * sin(th);
-    // }
+    // Amplitude of forward-moving wave is Ef, backwards is Eb
+    const double complex Ef = v * exp(1 * I * kz * distance);
+    const double complex Eb = w * exp(-1 * I * kz * distance);
+
+    // Poynting vector
+    double complex poyn;
+    if (pol == 0)  // s-polarization
+    {
+        poyn = (
+            creal( n * cos(th) * conj(Ef + Eb) * (Ef - Eb) )
+            / creal( n_0 * cos(th_0) )
+        );
+    } else  // p-polarization
+    {
+        poyn = (
+            creal( n * conj( cos(th) ) * (Ef + Eb) * conj( Ef - Eb ) )
+            / creal( n_0 * conj( cos(th_0) ) )
+        );
+    }
+
+    // Absorbed energy density
+    double complex absor;
+    if (pol == 0)  // s-polarization
+    {
+        absor = (
+            // cimag( n * cos(th) * kz * abs(Ef + Eb) ** 2 )  // make permanent
+            cimag( n * cos(th) * kz * abs(Ef + Eb) * 2 )  // temp
+            / creal( n_0 * cos(th_0) )
+        );
+    } else  // p-polarization
+    {
+        absor = (
+            // cimag( n * conj( cos(th) ) * ( kz * abs(Ef - Eb) ** 2 - conj(kz) * abs(Ef + Eb) ** 2 ) )  // make permanent
+            cimag( n * conj( cos(th) ) * ( kz * abs(Ef - Eb) * 2 - conj(kz) * abs(Ef + Eb) * 2 ) )  // temp
+            / creal( n_0 * conj( cos(th_0) ) )
+        );
+    }
+
+    // Electric field
+    double complex Ex;
+    double complex Ey;
+    double complex Ez;
+    if (pol == 0)  // s-polarization
+    {
+        Ex = 0.0;
+        Ey = Ef + Eb;
+        Ez = 0.0;
+    } else  // p-polarization
+    {
+        Ex = (Ef - Eb) * cos(th);
+        Ey = 0.0;
+        Ez = (-Ef - Eb) * sin(th);
+    }
+
+    position_resolved_data->poyn = poyn;
+    position_resolved_data->absor = absor;
+    position_resolved_data->Ex = Ex;
+    position_resolved_data->Ey = Ey;
+    position_resolved_data->Ez = Ez;
 
     return 0;
 }
@@ -870,6 +947,11 @@ uint8_t position_resolved(
 
 /**
  * @brief
+ *
+ * Done!!!
+ *
+ * For large distance, layer = len(d_list), even though d_list[layer] does not
+ * exist in this case. For negative distance, return [-1, distance]
  *
  * @param d_list The list of thicknesses of layers, all of which are finite
  * @param d_list_size Size of d_list provided from the outer scope.
@@ -884,9 +966,16 @@ uint8_t find_in_structure(
     double interface_info[]
 )
 {
+    for (int i = 0; i < d_list_size; i++)
+    {
+        if (d_list[i] == INFINITY)
+        {
+            return 1;  // error; this function expects finite arguments
+        }
+    }
     if (distance < 0.0)
     {
-        interface_info[0] = 0.0;
+        interface_info[0] = -1.0;
         interface_info[1] = distance;
     } else
     {
@@ -906,6 +995,8 @@ uint8_t find_in_structure(
 
 /**
  * @brief
+ *
+ * Done!!!
  *
  * @param d_list
  * @param d_list_size Size of d_list provided from the outer scope.
@@ -927,6 +1018,9 @@ uint8_t find_in_structure_with_inf(
     } else
     {
         find_in_structure(d_list, d_list_size, distance, interface_info);
+
+        const double interface_info_0 = interface_info[0];
+        interface_info[0] = interface_info_0 + 1;
     }
 
     return 0;
@@ -964,7 +1058,7 @@ uint8_t layer_starts(
 /**
  * @brief An array listing what proportion of light is absorbed in each layer.
  *
- * TODO: must finished implementation!!!
+ * Done!!!
  *
  * @param coh_tmm_data
  * @param num_layers
@@ -980,21 +1074,23 @@ double absorp_in_each_layer(
     double power_entering_each_layer[num_layers];
     power_entering_each_layer[0] = 1.0;
     power_entering_each_layer[1] = coh_tmm_data->power_entering;
-    power_entering_each_layer[num_layers] = coh_tmm_data->T;
+    power_entering_each_layer[num_layers - 1] = coh_tmm_data->T;
 
     for (int i = 2; i < num_layers - 1; i++)
     {
-        // TODO: must finished position_resolved() implementation
-        // power_entering_each_layer[i] = position_resolved(i, 0, coh_tmm_data);
-        continue;
+        PositionResolvedData position_resolved_data;
+        position_resolved(i, 0, coh_tmm_data, &position_resolved_data);
+        power_entering_each_layer[i] = position_resolved_data.poyn;
     }
 
-    // double final_answer[num_layers];
     for (int i = 0; i < num_layers - 1; i++)
     {
-        final_answer[i] = power_entering_each_layer[i] - power_entering_each_layer[i + 1];
+        final_answer[i] = (
+            -1
+            * (power_entering_each_layer[i] - power_entering_each_layer[i + 1])
+        );
     }
-    final_answer[num_layers] = power_entering_each_layer[num_layers];
+    final_answer[num_layers - 1] = power_entering_each_layer[num_layers - 1];
 
     return 0.0;
 }
