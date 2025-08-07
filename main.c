@@ -56,6 +56,21 @@ int main(int argc, char** argv) {
     const uint8_t num_layers = 3;
     CohTmmData_create(&coh_tmm_data, num_layers);
 
+    double complex n_list[] = {  // number of items must equal num_layers
+        1.0 + 0.0 * I, 2.5 + 0.0 * I, 1.5 + 0.0 * I
+    };
+    for (int i = 0; i < num_layers; i++)
+    {
+        coh_tmm_data.n_list[i] = n_list[i];
+    }
+    for (int i = 0; i < num_layers; i++)
+    {
+        printf(
+            "complex index, n = %.3f + %.3fi\n",
+            creal(coh_tmm_data.n_list[i]), cimag(coh_tmm_data.n_list[i])
+        );
+    }
+
     coh_tmm_data.r = r;  // set reflection amplitude
     printf("reflection coefficient, r = %.3f + %.3fi\n", creal(coh_tmm_data.r), cimag(coh_tmm_data.r));
 

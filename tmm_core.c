@@ -8,13 +8,19 @@
  *
  */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <complex.h>
+#include <float.h>
 #include <math.h>
 #include "tmm_absorp_fn.h"
 #include "tmm_coherent.h"
 #include "tmm_core.h"
+#include "tmm_math.h"
+
+
+#define PI 3.14159265358979323846
 
 
 typedef enum
@@ -68,10 +74,10 @@ typedef struct {
  * @return
  */
 uint8_t make_2x2_array(
-    const double a,
-    const double b,
-    const double c,
-    const double d,
+    const double complex a,
+    const double complex b,
+    const double complex c,
+    const double complex d,
     double complex matrix[2][2]
 )
 {
@@ -89,31 +95,96 @@ uint8_t make_2x2_array(
  *
  * @param n Medium with complex refractive index, n
  * @param theta Angle of incidence
+ * @param answer Pass by reference from outer scope
  * @return
  */
-uint8_t is_forward_angle(const double complex n, const double theta)
+uint8_t is_forward_angle(
+    const double complex n, const double theta, bool* answer
+)
 {
-    bool answer;
+    // TODO: DBL_EPSILON
+
+    // bool answer;
 
     const double complex ncostheta = n * cos(theta);
 
-    if ( fabs( cimag(ncostheta) ) > 100.0 )
+    if ( fabs( cimag(ncostheta) ) > 100.0 * DBL_EPSILON )
     {
-        answer = cimag(ncostheta) > 0;
+        *answer = cimag(ncostheta) > 0;
     } else
     {
-        answer = creal(ncostheta) > 0;
+        *answer = creal(ncostheta) > 0;
     }
 
-    // // double-check the answer ... can't be too careful!
-    //
-    // if ( answer )
-    // {
-    //     // printf("is_forward_angle: true\n");
-    // } else
-    // {
-    //     // printf("is_forward_angle: false\n");
-    // }
+    // double-check the answer ... can't be too careful!
+
+    if ( answer )
+    {
+
+        if ( !( cimag(ncostheta) > -100.0 * DBL_EPSILON) )
+        {
+            printf(
+                "It is not clear which beam is incoming vs outgoing. "
+                "Weird index maybe?\n"
+                "n: %.2f + %.2fi   angle: %.4f\n", creal(n), cimag(n), theta
+            );
+            return 1;
+        }
+
+        if ( !( creal(ncostheta) > -100.0 * DBL_EPSILON) )
+        {
+            printf(
+                "It is not clear which beam is incoming vs outgoing. "
+                "Weird index maybe?\n"
+                "n: %.2f + %.2fi   angle: %.4f\n", creal(n), cimag(n), theta
+            );
+            return 1;
+        }
+
+        if ( !( creal( n * cos(conj(theta)) ) > -100.0 * DBL_EPSILON ) )
+        {
+            printf(
+                "It is not clear which beam is incoming vs outgoing. "
+                "Weird index maybe?\n"
+                "n: %.2f + %.2fi   angle: %.4f\n", creal(n), cimag(n), theta
+            );
+            return 1;
+        }
+
+    } else
+    {
+
+        if ( !( cimag(ncostheta) < 100.0 * DBL_EPSILON) )
+        {
+            printf(
+                "It is not clear which beam is incoming vs outgoing. "
+                "Weird index maybe?\n"
+                "n: %.2f + %.2fi   angle: %.4f\n", creal(n), cimag(n), theta
+            );
+            return 1;
+        }
+
+        if ( !( creal(ncostheta) < 100.0 * DBL_EPSILON) )
+        {
+            printf(
+                "It is not clear which beam is incoming vs outgoing. "
+                "Weird index maybe?\n"
+                "n: %.2f + %.2fi   angle: %.4f\n", creal(n), cimag(n), theta
+            );
+            return 1;
+        }
+
+        if ( !( creal( n * cos(conj(theta)) ) < 100.0 * DBL_EPSILON ) )
+        {
+            printf(
+                "It is not clear which beam is incoming vs outgoing. "
+                "Weird index maybe?\n"
+                "n: %.2f + %.2fi   angle: %.4f\n", creal(n), cimag(n), theta
+            );
+            return 1;
+        }
+
+    }
 
     return 0;
 }
@@ -128,11 +199,28 @@ uint8_t is_forward_angle(const double complex n, const double theta)
  * @param th_2_guess Pass by reference from outer scope
  * @return
  */
-uint8_t snell(const double n_1, const double n_2, const double th_1, double* th_2_guess)
+uint8_t snell(
+    const double n_1,
+    const double n_2,
+    const double th_1,
+    double* th_2_guess
+)
 {
-    *th_2_guess = asin(n_1 * sin(th_1) / n_2);  // units of rad
+    // *th_2_guess = asin(n_1 * sin(th_1) / n_2);  // units of rad
 
-    // is_forward_angle()
+    // TODO: must make n_2 complex rather than this intermediate step
+    const double complex eta2 = n_2 + 0.0 * I;
+
+    bool answer;
+    is_forward_angle(eta2, *th_2_guess, &answer);  // must de-reference th_2_guess
+
+    if ( answer )
+    {
+        *th_2_guess = asin(n_1 * sin(th_1) / n_2);  // units of rad
+    } else
+    {
+        *th_2_guess = PI - asin(n_1 * sin(th_1) / n_2);  // units of rad
+    }
 
     return 0;
 }
@@ -166,6 +254,8 @@ uint8_t list_snell(
 
 /**
  * @brief Complex reflection amplitude from Fresnel equations
+ *
+ * Done!!!
  *
  * @param polarization
  * @param n_i
@@ -205,7 +295,7 @@ uint8_t interface_r(
 /**
  * @brief
  *
- *
+ * Done!!!
  *
  * @param polarization
  * @param n_i
@@ -245,7 +335,7 @@ uint8_t interface_t(
 /**
  * @brief Calculate reflected power R, starting with reflection amplitude r.
  *
- *
+ * Done!!!
  *
  * @param r
  * @param R
@@ -265,7 +355,7 @@ uint8_t R_from_r(const double complex r, double* R)
 /**
  * @brief Calculate transmitted power T, starting with transmission amplitude t.
  *
- *
+ * Done!!!
  *
  * @param pol
  * @param t
@@ -314,7 +404,7 @@ uint8_t T_from_t(
  * @brief Calculate the power entering the first interface, starting with
  * complex reflection amplitude, r.
  *
- *
+ * Done!!!
  *
  * @param pol
  * @param r
@@ -429,7 +519,14 @@ uint8_t coh_tmm(
         return 1;
     }
 
-    // is_forward_angle();
+    // Must be a forward angle
+    bool answer;
+    is_forward_angle(n_list[0], th_0, &answer);
+    if (!answer)
+    {
+        printf("Error in n0 or th0!");
+        return 1;
+    }
 
     // th_list is a list with, for each layer, the angle that the light
     // travels through the layer. Computed with Snell's law. Note that
@@ -498,16 +595,28 @@ uint8_t coh_tmm(
     double complex M_list[num_layers][2][2];
     for (int i = 1; i < num_layers - 1; i++)
     {
+        double complex mat1[2][2];
+        make_2x2_array( exp(-1 * I * delta[i]), 0, 0, exp(1 * I * delta[i]), mat1 );
 
-        continue;
+        double complex mat2[2][2];
+        make_2x2_array( 1, r_list[i][i + 1], r_list[i][i + 1], 1, mat2 );
+
+        (1 / t_list[i][i + 1]) * 1 * tmm_matrix_product(mat1, mat2, M_list[i]);
     }
     double complex Mtilde[2][2];
     make_2x2_array(1, 0, 0, 1, Mtilde);
     for (int i = 1; i < num_layers - 1; i++)
     {
         // TODO: Mtilde = np.dot(Mtilde, M_list[i])
-        continue;
+        // TODO: update or new function to return updated Mtilde from mat product
+        // tmm_matrix_product(Mtilde, M_list[i], Mtilde);
     }
+    double complex mat1[2][2];
+    make_2x2_array( 1, r_list[0][1], r_list[0][1], 1, mat1 );
+    // mat / t_list[0][1]  // TODO: port to C99
+    tmm_scalar_division(mat1, t_list[0][1]);
+    // tmm_matrix_product();
+
 
     // Net complex transmission and reflection amplitudes
     double complex r = Mtilde[1][0] / Mtilde[0][0];
@@ -546,6 +655,13 @@ uint8_t coh_tmm(
     power_entering_from_r(pol, r, n_list[0], th_0, &power_entering);
 
     // Store the data in the struct
+    for (int i = 0; i < num_layers; i++)
+    {
+        coh_tmm_data->kz_list[i] = kz_list[i];
+        coh_tmm_data->th_list[i] = th_list[i];
+        coh_tmm_data->n_list[i] = n_list[i];  // assign items in n_list to coh_tmm_data->n_list
+        coh_tmm_data->d_list[i] = d_list[i];
+    }
     coh_tmm_data->r = r;
     coh_tmm_data->t = t;
     coh_tmm_data->R = R;
@@ -611,7 +727,7 @@ uint8_t coh_tmm_reverse(
  * @param num_layers
  * @param th_0
  * @param lam_vac
- * @param coh_tmm_data Pass by reference from outer scope
+ * @param ellips_data Pass by reference from outer scope
  * @return
  */
 uint8_t ellips(
@@ -642,6 +758,8 @@ uint8_t ellips(
 
 /**
  * @brief Calculates reflected and transmitted power for unpolarized light.
+ *
+ * Done!!!
  *
  * @param n_list
  * @param d_list
@@ -818,6 +936,8 @@ uint8_t find_in_structure_with_inf(
 /**
  * @brief Gives the location of the start of any given layer
  *
+ * Done!!!
+ *
  * The location of the start of any given layer, relative to the front
  * of the whole multilayer structure. (i.e. the start of layer 1)
  *
@@ -830,8 +950,8 @@ uint8_t layer_starts(
     const double d_list[], const uint8_t d_list_size, double final_answer[]
 )
 {
-    // Confirm that -1 * INFINITY if equivalent to -np.inf
-    final_answer[0] = -1 * INFINITY;  // TODO: replace with -inf
+    // TODO: Confirm that -1 * INFINITY if equivalent to -np.inf
+    final_answer[0] = -1 * INFINITY;
     final_answer[1] = 0.0;
     for (int i = 2; i < d_list_size; i++)
     {
