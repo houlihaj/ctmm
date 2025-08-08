@@ -518,7 +518,7 @@ uint8_t interface_T(
 /**
  * @brief Main "coherent transfer matrix method" computation.
  *
- * TODO: Not Implemented!!!
+ * Done!!!
  *
  * @param pol Light polarization, "s" or "p"
  * @param n_list
@@ -542,6 +542,7 @@ uint8_t coh_tmm(
     // d_list must start and end with INFINITY
     if (d_list[0] != INFINITY || d_list[num_layers - 1] != INFINITY)
     {
+        printf("d_list must start and end with inf!");
         // return with error
         return 1;
     }
@@ -590,6 +591,7 @@ uint8_t coh_tmm(
             delta[i] = creal(delta[i]) + cimag(35);
 
             // TODO: Must add opacity check and warning!!!
+            // TODO: function can be validated before implementing check
         }
     }
 
@@ -628,22 +630,31 @@ uint8_t coh_tmm(
         double complex mat2[2][2];
         make_2x2_array( 1, r_list[i][i + 1], r_list[i][i + 1], 1, mat2 );
 
-        (1 / t_list[i][i + 1]) * 1 * tmm_matrix_product(mat1, mat2, M_list[i]);
+        // TODO: Must this be matrix scalar multiplication???
+        // Multiply with 2x2 matrix, mat2
+        double complex product[2][2];
+        // tmm_matrix_product(mat1, mat2, product);
+        tmm_matrix_product(mat1, mat2, M_list[i]);
+        // TODO: M_list[i] = (1 / t_list[i][i + 1]) * 1 * product;
+        tmm_scalar_product(M_list[i], (1 / t_list[i][i + 1]));
     }
     double complex Mtilde[2][2];
     make_2x2_array(1, 0, 0, 1, Mtilde);
     for (int i = 1; i < num_layers - 1; i++)
     {
         // TODO: Mtilde = np.dot(Mtilde, M_list[i])
-        // TODO: update or new function to return updated Mtilde from mat product
-        // tmm_matrix_product(Mtilde, M_list[i], Mtilde);
+        // TODO: validate existing matrix product function
+        // TODO: may have to update or new function to return updated Mtilde from mat product
+        // Multiply with 2x2 matrix, M_list[i]
+        tmm_matrix_product(Mtilde, M_list[i], Mtilde);
     }
     double complex mat1[2][2];
     make_2x2_array( 1, r_list[0][1], r_list[0][1], 1, mat1 );
-    // mat / t_list[0][1]  // TODO: port to C99
     tmm_scalar_division(mat1, t_list[0][1]);
-    // tmm_matrix_product();
-
+    // TODO: validate existing matrix product function
+    // TODO: may have to update or new function to return updated Mtilde from mat product
+    // Multiply with 2x2 matrix, Mtilde
+    tmm_matrix_product(mat1, Mtilde, Mtilde);
 
     // Net complex transmission and reflection amplitudes
     double complex r = Mtilde[1][0] / Mtilde[0][0];
@@ -654,18 +665,20 @@ uint8_t coh_tmm(
     double complex vw_list[num_layers][2];
     // 2x1 array (2 rows, 1 column)
     double complex vw[2][1] = {{t},{0.0 + 0.0 * I}};
-
-    // // TODO: vw_list[-1,:] = np.transpose(vw)
-    // // Assign the transpose of vw to the last row of vw_list
-    // vw_list[num_layers - 1][0] = vw[0];
-    // vw_list[num_layers - 1][1] = vw[1];
+    // 1x2 array (1 rows, 2 column)
+    double complex vw_tr[1][2];
+    tmm_transpose(vw, vw_tr);
+    vw_list[num_layers - 1][0] = vw_tr[0][0];
+    vw_list[num_layers - 1][1] = vw_tr[0][1];
 
     // TODO: must confirm loop is implemented correctly
     for (int i = num_layers - 2; i > 0; i--)
     {
-        // TODO: vw = np.dot(M_list[i], vw)
-        // TODO: vw_list[i,:] = np.transpose(vw)
-        continue;
+        // Multiple with a 2x1 vector, vw
+        tmm_matrix_by_vector(M_list[i], vw, vw);
+        tmm_transpose(vw, vw_tr);
+        vw_list[i][0] = vw_tr[0][0];
+        vw_list[i][1] = vw_tr[0][1];
     }
 
     // Net transmitted and reflected power, as a proportion of the

@@ -55,9 +55,15 @@ uint8_t R_from_r(const double complex r, double* R);
 // );
 //
 //
-// uint8_t coh_tmm(
-//     uint8_t pol, double n_list[], double d_list[], uint8_t num_layers, double th_0, double lam_vac
-// );
+uint8_t coh_tmm(
+    uint8_t pol,
+    const double complex n_list[],
+    const double d_list[],
+    uint8_t num_layers,
+    double th_0,
+    double lam_vac,
+    CohTmmData* coh_tmm_data
+);
 //
 //
 // double coh_tmm_reverse(

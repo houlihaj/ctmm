@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <complex.h>
+#include <math.h>
 
 #include "tmm_absorp_fn.h"
 #include "tmm_coherent.h"
@@ -38,7 +39,9 @@ int main(int argc, char** argv) {
     R_from_r(r, &R);
     printf("reflectivity, R = %.3f\n", R);
 
+    ////////////////////////////////////////////////////////////////////////////
     // Test AbsorpAnalyticFn
+
     AbsorpAnalyticFn absorp_fn;
     fill_in(&absorp_fn);
     printf(
@@ -51,31 +54,56 @@ int main(int argc, char** argv) {
         creal(absorp_fn.A1), cimag(absorp_fn.A1), creal(absorp_fn.A2), cimag(absorp_fn.A2)
     );
 
-    // Test CohTmmData instantiation, memory allocation, and deallocation
+    ////////////////////////////////////////////////////////////////////////////
+    // // Test CohTmmData instantiation, memory allocation, and deallocation
+    //
+    // CohTmmData coh_tmm_data;  // allocate struct in outer scope
+    // const uint8_t num_layers = 3;
+    // CohTmmData_create(&coh_tmm_data, num_layers);
+    //
+    // double complex n_list[] = {  // number of items must equal num_layers
+    //     1.0 + 0.0 * I, 2.5 + 0.0 * I, 1.5 + 0.0 * I
+    // };
+    // for (int i = 0; i < num_layers; i++)
+    // {
+    //     coh_tmm_data.n_list[i] = n_list[i];
+    // }
+    // for (int i = 0; i < num_layers; i++)
+    // {
+    //     printf(
+    //         "complex index, n = %.3f + %.3fi\n",
+    //         creal(coh_tmm_data.n_list[i]), cimag(coh_tmm_data.n_list[i])
+    //     );
+    // }
+    //
+    // coh_tmm_data.r = r;  // set reflection amplitude
+    // printf("reflection coefficient, r = %.3f + %.3fi\n", creal(coh_tmm_data.r), cimag(coh_tmm_data.r));
+    //
+    // coh_tmm_data.R = R;  // set reflectivity
+    // printf("reflectivity, R = %.3f\n", coh_tmm_data.R);
+    //
+    // CohTmmData_destroy(&coh_tmm_data);
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Execute coh_tmm() to compute reflection and transmission coefficients
+
     CohTmmData coh_tmm_data;  // allocate struct in outer scope
-    const uint8_t num_layers = 3;
+    const uint8_t num_layers = 4;
     CohTmmData_create(&coh_tmm_data, num_layers);
-
-    double complex n_list[] = {  // number of items must equal num_layers
-        1.0 + 0.0 * I, 2.5 + 0.0 * I, 1.5 + 0.0 * I
+    // list of layer thicknesses in nm
+    const double d_list[] = {INFINITY, 100, 300, INFINITY};  // must start and end with INFINITY
+    // list of refractive indices
+    const double complex n_list[] = {
+        1.0 + 0.0 * I, 2.2 + 0.0 * I, 3.3 + 0.3 * I, 1.0 + 0.0 * I
     };
-    for (int i = 0; i < num_layers; i++)
-    {
-        coh_tmm_data.n_list[i] = n_list[i];
-    }
-    for (int i = 0; i < num_layers; i++)
-    {
-        printf(
-            "complex index, n = %.3f + %.3fi\n",
-            creal(coh_tmm_data.n_list[i]), cimag(coh_tmm_data.n_list[i])
-        );
-    }
 
-    coh_tmm_data.r = r;  // set reflection amplitude
+    coh_tmm(0, n_list, d_list, num_layers, 0.0, 1.550, &coh_tmm_data);
+
     printf("reflection coefficient, r = %.3f + %.3fi\n", creal(coh_tmm_data.r), cimag(coh_tmm_data.r));
-
-    coh_tmm_data.R = R;  // set reflectivity
     printf("reflectivity, R = %.3f\n", coh_tmm_data.R);
+
+    printf("transmission coefficient, t = %.3f + %.3fi\n", creal(coh_tmm_data.t), cimag(coh_tmm_data.t));
+    printf("transmissivity, T = %.3f\n", coh_tmm_data.T);
 
     CohTmmData_destroy(&coh_tmm_data);
 

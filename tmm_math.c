@@ -7,7 +7,7 @@
 
 
 /**
- * @brief Makes a 2x2 array of [[a,b],[c,d]]
+ * @brief Matrix multiplication of two 2x2 arrays
  *
  * Must declare the matrix in the outer scope and pass it into
  * this function for initialization of the elements
@@ -37,6 +37,37 @@ uint8_t tmm_matrix_product(
 
 
 /**
+ * @brief Matrix multiplication of a 2x2 array and a 2x1 array
+ *
+ * Must declare the matrix in the outer scope and pass it into
+ * this function for initialization of the elements
+ *
+ * @param mat1 2x2 array
+ * @param mat2 2x1 array
+ * @param product 2x1 array from the outer scope to hold the result
+ * @return
+ */
+uint8_t tmm_matrix_by_vector(
+    const double complex mat1[2][2],
+    const double complex mat2[2][1],  // copilot suggestion
+    double complex product[2][1]  // copilot suggestion
+)
+{
+    // Matrix multiplication product = mat1 * mat2
+
+    for (int i = 0; i < 2; ++i)
+    {
+        product[i][0] = 0.0 + 0.0 * I;
+        for (int j = 0; j < 2; ++j) {
+            product[i][0] += mat1[i][j] * mat2[j][0];
+        }
+    }
+
+    return 0;
+}
+
+
+/**
  * @brief Makes a 2x2 array of [[a,b],[c,d]]
  *
  * Must declare the matrix in the outer scope and pass it into
@@ -60,6 +91,45 @@ uint8_t tmm_scalar_division(
             mat1[i][j] /= divisor;
         }
     }
+    return 0;
+}
+
+
+/**
+ * @brief Makes a 2x2 array of [[a,b],[c,d]]
+ *
+ * Must declare the matrix in the outer scope and pass it into
+ * this function for initialization of the elements
+ *
+ * @param mat1 2x2 array from the outer scope; also the output result array
+ * @param scalar the scalar
+ * @return
+ */
+uint8_t tmm_scalar_product(
+    double complex mat1[2][2], const double complex scalar
+)
+{
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            mat1[i][j] *= scalar;
+        }
+    }
+    return 0;
+}
+
+
+/**
+ * @brief Matrix transpose
+ *
+ * @param vw
+ * @param vw_tr
+ * @return
+ */
+uint8_t tmm_transpose(
+    double complex vw[2][1], double complex vw_tr[1][2]
+) {
+    vw_tr[0][0] = vw[0][0];
+    vw_tr[0][1] = vw[1][0];
     return 0;
 }
 
