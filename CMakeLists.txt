@@ -5,16 +5,17 @@ set(CMAKE_C_STANDARD 99)
 
 add_executable(${PROJECT_NAME}
         main.c
-        tmm_core.c
-        tmm_core.h
-        tmm_absorp_fn.c
-        tmm_absorp_fn.h
-        tmm_coherent.c
-        tmm_coherent.h
-        tmm_math.c
-        tmm_math.h
-        tmm_util.c
-        tmm_util.h)
+        src/tmm_core.c
+        src/tmm_core.h
+        src/tmm_absorp_fn.c
+        src/tmm_absorp_fn.h
+        src/tmm_coherent.c
+        src/tmm_coherent.h
+        src/tmm_math.c
+        src/tmm_math.h
+        src/tmm_util.c
+        src/tmm_util.h
+)
 
 # Link with the math library (-lm)
 target_link_libraries(${PROJECT_NAME} m)

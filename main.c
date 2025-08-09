@@ -7,9 +7,9 @@
 #include <complex.h>
 #include <math.h>
 
-#include "tmm_absorp_fn.h"
-#include "tmm_coherent.h"
-#include "tmm_core.h"
+#include "src/tmm_absorp_fn.h"
+#include "src/tmm_coherent.h"
+#include "src/tmm_core.h"
 
 
 int main(int argc, char** argv) {
