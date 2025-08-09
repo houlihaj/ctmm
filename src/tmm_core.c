@@ -32,21 +32,6 @@ typedef enum
 } TmmStatus;
 
 
-typedef struct {
-    double psi;  // units of radians
-    double delta;  // units of radians
-} EllipsData;
-
-
-typedef struct {
-    double complex poyn;
-    double complex absor;
-    double complex Ex;
-    double complex Ey;
-    double complex Ez;
-} PositionResolvedData;
-
-
 /**
  * @brief Makes a 2x2 array of [[a,b],[c,d]]
  *
@@ -627,19 +612,12 @@ uint8_t coh_tmm(
     for (int i = 1; i < num_layers - 1; i++)
     {
         tmm_matrix_copy(2, Mtilde, Mtilde_copy);
-        // TODO: Mtilde = np.dot(Mtilde, M_list[i])
-        // TODO: validate existing matrix product function
-        // TODO: may have to update or new function to return updated Mtilde from mat product
-        // tmm_matrix_product(Mtilde, M_list[i], Mtilde);
         tmm_matrix_product(Mtilde_copy, M_list[i], Mtilde);
     }
     double complex mat1[2][2];
     make_2x2_array( 1, r_list[0][1], r_list[0][1], 1, mat1 );
     tmm_scalar_division(mat1, t_list[0][1]);
     tmm_matrix_copy(2, Mtilde, Mtilde_copy);
-    // TODO: validate existing matrix product function
-    // TODO: may have to update or new function to return updated Mtilde from mat product
-    // tmm_matrix_product(mat1, Mtilde, Mtilde);
     tmm_matrix_product(mat1, Mtilde_copy, Mtilde);
 
     // Net complex transmission and reflection amplitudes
@@ -657,7 +635,6 @@ uint8_t coh_tmm(
     vw_list[num_layers - 1][0] = vw_tr[0][0];
     vw_list[num_layers - 1][1] = vw_tr[0][1];
 
-    // TODO: must confirm loop is implemented correctly
     for (int i = num_layers - 2; i > 0; i--)
     {
         tmm_matrix_by_vector(M_list[i], vw, vw);
@@ -670,8 +647,6 @@ uint8_t coh_tmm(
     // incoming light power.
     double R;
     R_from_r(r_coeff, &R);
-    // TODO: confirm n_list[-1] and n_list[num_layers - 1] are equivalent
-    // TODO: confirm th_list[-1] and th_list[num_layers - 1] are equivalent
     double T;
     T_from_t(
         pol, t_coeff, n_list[0], n_list[num_layers - 1], th_list[0], th_list[num_layers - 1], &T
@@ -725,7 +700,6 @@ uint8_t coh_tmm_reverse(
     CohTmmData* coh_tmm_data
 )
 {
-    // TODO: confirm n_list[-1] and n_list[num_layers - 1] is equivalent
     double th_f;
     snell(n_list[0], n_list[num_layers - 1], th_0, &th_f);
 
@@ -864,9 +838,9 @@ uint8_t position_resolved(
         w = coh_tmm_data->r;
     }
     double complex kz = coh_tmm_data->kz_list[layer];
-    double complex th = coh_tmm_data->th_list[layer];
-    double complex n = coh_tmm_data->n_list[layer];
-    double complex n_0 = coh_tmm_data->n_list[0];
+    const double complex th = coh_tmm_data->th_list[layer];
+    const double complex n = coh_tmm_data->n_list[layer];
+    const double complex n_0 = coh_tmm_data->n_list[0];
     const double th_0 = coh_tmm_data->th_0;
     const double pol = coh_tmm_data->pol;
 
@@ -1065,7 +1039,7 @@ uint8_t layer_starts(
  * @param final_answer
  * @return
  */
-double absorp_in_each_layer(
+uint8_t absorp_in_each_layer(
     CohTmmData* coh_tmm_data,
     const uint8_t num_layers,
     double final_answer[]
@@ -1092,7 +1066,7 @@ double absorp_in_each_layer(
     }
     final_answer[num_layers - 1] = power_entering_each_layer[num_layers - 1];
 
-    return 0.0;
+    return 0;
 }
 
 
@@ -1106,12 +1080,71 @@ double absorp_in_each_layer(
  *
  * @param n_list
  * @param d_list
- * @param c_list
+ * @param num_layers Number of layers
+ * @param c_list coherency list; entries should be 'i' (0) for incoherent or
+ *     'c' (1) for 'coherent'
  * @return
  */
-double inc_group_layers(double complex n_list[], double d_list[], double c_list[])
+uint8_t inc_group_layers(
+    double complex n_list[],
+    double d_list[],
+    uint8_t c_list[],
+    const uint8_t num_layers
+)
 {
-    return 0.0;
+    // d_list must start and end with INFINITY
+    if (d_list[0] != INFINITY || d_list[num_layers - 1] != INFINITY)
+    {
+        printf("d_list must start and end with inf!\n");
+        // return with error
+        return 1;
+    }
+
+    // c_list should start and end with 0 (incoherent)
+    if (c_list[0] != 0 || c_list[num_layers - 1] != 0)
+    {
+        printf("c_list should start and end with 0 (incoherent)\n");
+        return 1;  // return with error
+    }
+
+    uint8_t inc_index = 0;
+    uint8_t stack_index = 0;
+    bool stack_in_progress = false;
+
+    for (int alllayer_index = 0; alllayer_index < num_layers; alllayer_index++)
+    {
+        if (c_list[alllayer_index] == 1)  // coherent layer
+        {
+            printf("coherent layer");
+            // TODO: inc_from_all.append(nan)
+            if (!stack_in_progress)  // this layer is starting new stack
+            {
+                stack_in_progress = true;
+                uint8_t within_stack_index = 1;
+            } else  // another coherent layer in the same stack
+            {
+                // TODO: within_stack_index += 1
+            }
+
+        } else if (c_list[alllayer_index] == 0)  // incoherent layer
+        {
+            printf("incoherent layer");
+            if (!stack_in_progress)  // previous layer was also incoherent
+            {
+                printf("previous layer was also incoherent");
+            } else  // previous layer was coherent
+            {
+                printf("previous layer was coherent");
+            }
+
+        } else
+        {
+            printf("[ValueError] Error: c_list entries must be 'i' or 'c'!");
+            return 1;  // return with error
+        }
+    }
+
+    return 0;
 }
 
 
@@ -1124,20 +1157,95 @@ double inc_group_layers(double complex n_list[], double d_list[], double c_list[
  * @param n_list
  * @param d_list
  * @param c_list
+ * @param num_layers
  * @param th_0
  * @param lam_vac
  * @return
  */
-double inc_tmm(
+uint8_t inc_tmm(
     uint8_t pol,
     double complex n_list[],
     double d_list[],
-    double c_list[],
+    uint8_t c_list[],
+    const uint8_t num_layers,
     double th_0,
     double lam_vac
 )
 {
-    return 0.0;
+    // TODO: Input tests
+    // inc_group_layers(n_list, d_list, c_list);
+
+    // th_list is a list with, for each layer, the angle that the light
+    // travels through the layer. Computed with Snell's law. Note that
+    // the "angles" may be complex!
+    double complex th_list[num_layers];
+    list_snell(n_list, num_layers, th_0, th_list);
+
+    // coh_tmm_data_list[i] is the output of coh_tmm for the i'th stack
+    // TODO: coh_tmm_data_list = []
+    // coh_tmm_bdata_list[i] is the same stack as coh_tmm_data_list[i] but
+    // with order of layers reversed
+    // TODO: coh_tmm_bdata_list = []
+
+    // num_stacks placeholder
+    uint8_t num_stacks = 4;
+    for (int i = 0; i < num_stacks; i++)
+    {
+
+    }
+
+    // P_list[i] is fraction not absorbed in a single pass through i'th incoherent
+    // layer.
+    // num_stacks placeholder
+    uint8_t num_inc_layers = 4;
+    for (int inc_index = 1; inc_index < num_inc_layers - 1; inc_index++)
+    {
+
+    }
+
+    // T_list[i,j] and R_list[i,j] are transmission and reflection powers,
+    // respectively, coming from the i'th incoherent layer, going to the j'th
+    // incoherent layer. Only need to calculate this when j=i+1 or j=i-1.
+    // (2D array is overkill but helps avoid confusion.)
+    // initialize these arrays
+    double complex t_list[num_inc_layers][num_inc_layers];
+    tmm_matrix_zeros(num_inc_layers, t_list);
+    double complex r_list[num_inc_layers][num_inc_layers];
+    tmm_matrix_zeros(num_inc_layers, r_list);
+    for (int inc_index = 0; inc_index < num_inc_layers - 1; inc_index++)  // looking at interface i -> i + 1
+    {
+
+    }
+
+    // L is the transfer matrix from the i'th to (i+1)st incoherent layer, see
+    // https://arxiv.org/abs/1603.02720
+    for (int i = 1; i < num_inc_layers - 1; i++)
+    {
+
+    }
+
+    // VW_list[n] = [V_n, W_n], the forward- and backward-moving intensities
+    // at the beginning of the n'th incoherent layer. VW_list[0] is undefined
+    // because 0'th layer has no beginning.
+    for (int i = num_layers - 2; i > 0; i--)
+    {
+
+    }
+
+    // stackFB_list[n]=[F,B] means that F is light traveling forward towards n'th
+    // stack and B is light traveling backwards towards n'th stack.
+    // Reminder: inc_from_stack[i] = j means that the i'th stack comes after the
+    // layer with incoherent index j.
+
+    // power_entering_list[i] is the normalized Poynting vector crossing the
+    // interface into the i'th incoherent layer from the previous (coherent or
+    // incoherent) layer. See https://arxiv.org/abs/1603.02720 .
+    for (int i = 1; i < num_inc_layers; i++)
+    {
+
+    }
+
+    return 0;
 }
 
 
@@ -1147,15 +1255,15 @@ double inc_tmm(
  * @param inc_data
  * @return
  */
-double inc_absorp_in_each_layer(double inc_data)
+uint8_t inc_absorp_in_each_layer(double inc_data)
 {
-    return 0.0;
+    return 0;
 }
 
 
 /**
- * @brief Outputs an absorp_analytic_fn object for a coherent layer within a
- *     partly-incoherent stack.
+ * @brief Outputs an absorp_analytic_fn object for a coherent layer
+ *     within a partly-incoherent stack.
  *
  * inc_data is output of inc_tmm()
  *
