@@ -18,6 +18,7 @@
 #include "tmm_coherent.h"
 #include "tmm_core.h"
 #include "tmm_math.h"
+#include "tmm_util.h"
 
 
 #define PI 3.14159265358979323846
@@ -29,29 +30,6 @@ typedef enum
     ERROR,
     NOT_IMPLEMENTED
 } TmmStatus;
-
-
-// /**
-//  * @brief asdfas
-//  *
-//  * This struct holds integer values for the x and y coordinates.
-//  */
-// typedef struct {
-//     double complex r;  // complex reflection amplitude (i.e. reflection coefficient)
-//     double complex t;  // complex transmission amplitude (i.e. transmission coefficient)
-//     double R;  // real reflectivity
-//     double T;  // real transmissivity
-//     uint8_t num_layers;
-//     double power_entering;
-//     double* vw_list;
-//     double complex* kz_list;
-//     double* th_list;
-//     double pol;
-//     double complex* n_list;
-//     double* d_list;
-//     double th_0;
-//     double lam_vac;
-// } CohTmmData;
 
 
 typedef struct {
@@ -125,7 +103,7 @@ uint8_t is_forward_angle(
         *answer = creal(ncostheta) > 0;
     }
 
-    // double-check the answer ... can't be too careful!
+    // double-check the answer ... cannot be too careful!
 
     if ( answer )
     {
@@ -257,10 +235,11 @@ uint8_t list_snell(
     {
         // TODO: May have to do creal(n_list_0) instead of n_list_0
         angles[i] = asin( n_list_0 * sin(th_0) / n_list[i] );
+        // angles[i] = asin( creal(n_list_0) * sin(th_0) / n_list[i] );
     }
 
     // The first and last entry need to be the forward angle (the intermediate
-    // layers don't matter, see https://arxiv.org/abs/1603.02720 Section 5)
+    // layers do not matter, see https://arxiv.org/abs/1603.02720 Section 5)
     bool answer;
     is_forward_angle(n_list[0], angles[0], &answer);
     if (!answer)
@@ -297,8 +276,8 @@ uint8_t interface_r(
     const uint8_t polarization,
     const double complex n_i,
     const double complex n_f,
-    const double th_i,
-    const double th_f,
+    const double complex th_i,
+    const double complex th_f,
     double complex* r
 )
 {
@@ -337,8 +316,8 @@ uint8_t interface_t(
     const uint8_t polarization,
     const double complex n_i,
     const double complex n_f,
-    const double th_i,
-    const double th_f,
+    const double complex th_i,
+    const double complex th_f,
     double complex* t
 )
 {
@@ -399,8 +378,8 @@ uint8_t T_from_t(
     const double complex t,
     const double complex n_i,
     const double complex n_f,
-    const double th_i,
-    const double th_f,
+    const double complex th_i,
+    const double complex th_f,
     double* T
 )
 {
@@ -542,7 +521,7 @@ uint8_t coh_tmm(
     // d_list must start and end with INFINITY
     if (d_list[0] != INFINITY || d_list[num_layers - 1] != INFINITY)
     {
-        printf("d_list must start and end with inf!");
+        printf("d_list must start and end with inf!\n");
         // return with error
         return 1;
     }
@@ -552,7 +531,7 @@ uint8_t coh_tmm(
     is_forward_angle(n_list[0], th_0, &answer);
     if (!answer)
     {
-        printf("Error in n0 or th0!");
+        printf("Error in n0 or th0!\n");
         return 1;
     }
 
@@ -577,18 +556,20 @@ uint8_t coh_tmm(
     double complex delta[num_layers];
     for (int i = 0; i < num_layers; i++)
     {
+        // TODO: when d_list[i] is INFINITY, may have to take creal(kz_list[i])
         delta[i] = kz_list[i] * d_list[i];
     }
 
     // For a very opaque layer, reset delta to avoid divide-by-0 and similar
     // errors. The criterion imag(delta) > 35 corresponds to single-pass
-    // transmission < 1e-30 --- small enough that the exact value doesn't
+    // transmission < 1e-30 --- small enough that the exact value does not
     // matter.
     for (int i = 1; i < num_layers - 1; i++)
     {
         if ( cimag(delta[i]) > 35 )
         {
-            delta[i] = creal(delta[i]) + cimag(35);
+            const double complex delta_i = delta[i];
+            delta[i] = creal(delta_i) + cimag(35);
 
             // TODO: Must add opacity check and warning!!!
             // TODO: function can be validated before implementing check
@@ -599,7 +580,9 @@ uint8_t coh_tmm(
     // respectively, coming from i, going to j. Only need to calculate this when
     // j=i+1. (2D array is overkill but helps avoid confusion.)
     double complex t_list[num_layers][num_layers];
+    tmm_matrix_zeros(num_layers, t_list);
     double complex r_list[num_layers][num_layers];
+    tmm_matrix_zeros(num_layers, r_list);
     for (int i = 0; i < num_layers - 1; i++)
     {
         double complex t;
@@ -630,12 +613,7 @@ uint8_t coh_tmm(
         double complex mat2[2][2];
         make_2x2_array( 1, r_list[i][i + 1], r_list[i][i + 1], 1, mat2 );
 
-        // TODO: Must this be matrix scalar multiplication???
-        // Multiply with 2x2 matrix, mat2
-        double complex product[2][2];
-        // tmm_matrix_product(mat1, mat2, product);
         tmm_matrix_product(mat1, mat2, M_list[i]);
-        // TODO: M_list[i] = (1 / t_list[i][i + 1]) * 1 * product;
         tmm_scalar_product(M_list[i], (1 / t_list[i][i + 1]));
     }
     double complex Mtilde[2][2];
@@ -645,7 +623,6 @@ uint8_t coh_tmm(
         // TODO: Mtilde = np.dot(Mtilde, M_list[i])
         // TODO: validate existing matrix product function
         // TODO: may have to update or new function to return updated Mtilde from mat product
-        // Multiply with 2x2 matrix, M_list[i]
         tmm_matrix_product(Mtilde, M_list[i], Mtilde);
     }
     double complex mat1[2][2];
@@ -653,18 +630,17 @@ uint8_t coh_tmm(
     tmm_scalar_division(mat1, t_list[0][1]);
     // TODO: validate existing matrix product function
     // TODO: may have to update or new function to return updated Mtilde from mat product
-    // Multiply with 2x2 matrix, Mtilde
     tmm_matrix_product(mat1, Mtilde, Mtilde);
 
     // Net complex transmission and reflection amplitudes
-    double complex r = Mtilde[1][0] / Mtilde[0][0];
-    double complex t = 1 / Mtilde[0][0];
+    const double complex r_coeff = Mtilde[1][0] / Mtilde[0][0];
+    const double complex t_coeff = 1 / Mtilde[0][0];
 
-    // vw_list[n] = [v_n, w_n]. v_0 and w_0 are undefined because the 0th
-    // medium has no left interface.
+    // vw_list[n] = [v_n, w_n]. v_0 and w_0 are undefined because
+    // the 0th medium has no left interface.
     double complex vw_list[num_layers][2];
     // 2x1 array (2 rows, 1 column)
-    double complex vw[2][1] = {{t},{0.0 + 0.0 * I}};
+    double complex vw[2][1] = {{t_coeff},{0.0 + 0.0 * I}};
     // 1x2 array (1 rows, 2 column)
     double complex vw_tr[1][2];
     tmm_transpose(vw, vw_tr);
@@ -674,7 +650,6 @@ uint8_t coh_tmm(
     // TODO: must confirm loop is implemented correctly
     for (int i = num_layers - 2; i > 0; i--)
     {
-        // Multiple with a 2x1 vector, vw
         tmm_matrix_by_vector(M_list[i], vw, vw);
         tmm_transpose(vw, vw_tr);
         vw_list[i][0] = vw_tr[0][0];
@@ -684,26 +659,27 @@ uint8_t coh_tmm(
     // Net transmitted and reflected power, as a proportion of the
     // incoming light power.
     double R;
-    R_from_r(r, &R);
+    R_from_r(r_coeff, &R);
     // TODO: confirm n_list[-1] and n_list[num_layers - 1] are equivalent
     // TODO: confirm th_list[-1] and th_list[num_layers - 1] are equivalent
     double T;
     T_from_t(
-        pol, t, n_list[0], n_list[num_layers - 1], th_list[0], th_list[num_layers - 1], &T
+        pol, t_coeff, n_list[0], n_list[num_layers - 1], th_list[0], th_list[num_layers - 1], &T
     );
     double power_entering;
-    power_entering_from_r(pol, r, n_list[0], th_0, &power_entering);
+    power_entering_from_r(pol, r_coeff, n_list[0], th_0, &power_entering);
 
     // Store the data in the struct
     for (int i = 0; i < num_layers; i++)
     {
+        // coh_tmm_data->vw_list[i] = vw_list[i];  // vw_list is an array whose items are an array of size 2
         coh_tmm_data->kz_list[i] = kz_list[i];
         coh_tmm_data->th_list[i] = th_list[i];
         coh_tmm_data->n_list[i] = n_list[i];  // assign items in n_list to coh_tmm_data->n_list
         coh_tmm_data->d_list[i] = d_list[i];
     }
-    coh_tmm_data->r = r;
-    coh_tmm_data->t = t;
+    coh_tmm_data->r = r_coeff;
+    coh_tmm_data->t = t_coeff;
     coh_tmm_data->R = R;
     coh_tmm_data->T = T;
     coh_tmm_data->power_entering = power_entering;
@@ -864,7 +840,7 @@ uint8_t position_resolved(
 
     if (layer > 0)
     {
-        // TODO: v,w = coh_tmm_data['vw_list'][layer]
+        // TODO: v,w = coh_tmm_data["vw_list"][layer]
         // const double complex v = coh_tmm_data->vw_list[layer][0];
         // const double complex w = coh_tmm_data->vw_list[layer][1];
 

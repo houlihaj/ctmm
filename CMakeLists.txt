@@ -12,7 +12,9 @@ add_executable(${PROJECT_NAME}
         tmm_coherent.c
         tmm_coherent.h
         tmm_math.c
-        tmm_math.h)
+        tmm_math.h
+        tmm_util.c
+        tmm_util.h)
 
 # Link with the math library (-lm)
 target_link_libraries(${PROJECT_NAME} m)

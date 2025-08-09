@@ -23,21 +23,37 @@ uint8_t snell(const double n_1, const double complex n_2, const double th_1, dou
 //
 //
 uint8_t interface_r(
-    uint8_t polarization, double complex n_i, double complex n_f, double th_i, double th_f, double complex* r
+    uint8_t polarization,
+    double complex n_i,
+    double complex n_f,
+    double complex th_i,
+    double complex th_f,
+    double complex* r
 );
 
 
 uint8_t interface_t(
-    uint8_t polarization, double complex n_i, double complex n_f, double th_i, double th_f, double complex* t
+    uint8_t polarization,
+    double complex n_i,
+    double complex n_f,
+    double complex th_i,
+    double complex th_f,
+    double complex* t
 );
 
 
-uint8_t R_from_r(const double complex r, double* R);
-//
-//
-// double T_from_t(
-//     const uint8_t pol, const double t, const double n_i, const double n_f, const double th_i, const double th_f
-// );
+uint8_t R_from_r(double complex r, double* R);
+
+
+uint8_t T_from_t(
+    uint8_t pol,
+    double complex t,
+    double complex n_i,
+    double complex n_f,
+    double complex th_i,
+    double complex th_f,
+    double* T
+);
 //
 //
 // double power_entering_from_r(
