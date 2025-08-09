@@ -605,32 +605,42 @@ uint8_t coh_tmm(
     // M_list[n]. M_0 and M_{num_layers-1} are not defined.
     // My M is a bit different than Sernelius's, but Mtilde is the same.
     double complex M_list[num_layers][2][2];
+    for (int i = 0; i < num_layers; i++)
+    {
+        tmm_matrix_zeros(2, M_list[i]);
+    }
     for (int i = 1; i < num_layers - 1; i++)
     {
         double complex mat1[2][2];
-        make_2x2_array( exp(-1 * I * delta[i]), 0, 0, exp(1 * I * delta[i]), mat1 );
+        make_2x2_array( cexp(-1 * I * delta[i]), 0, 0, cexp(1 * I * delta[i]), mat1 );
 
         double complex mat2[2][2];
         make_2x2_array( 1, r_list[i][i + 1], r_list[i][i + 1], 1, mat2 );
 
         tmm_matrix_product(mat1, mat2, M_list[i]);
         tmm_scalar_product(M_list[i], (1 / t_list[i][i + 1]));
+        // tmm_scalar_division(M_list[i], t_list[i][i + 1]);  // same results as scalar product
     }
     double complex Mtilde[2][2];
     make_2x2_array(1, 0, 0, 1, Mtilde);
+    double complex Mtilde_copy[2][2];
     for (int i = 1; i < num_layers - 1; i++)
     {
+        tmm_matrix_copy(2, Mtilde, Mtilde_copy);
         // TODO: Mtilde = np.dot(Mtilde, M_list[i])
         // TODO: validate existing matrix product function
         // TODO: may have to update or new function to return updated Mtilde from mat product
-        tmm_matrix_product(Mtilde, M_list[i], Mtilde);
+        // tmm_matrix_product(Mtilde, M_list[i], Mtilde);
+        tmm_matrix_product(Mtilde_copy, M_list[i], Mtilde);
     }
     double complex mat1[2][2];
     make_2x2_array( 1, r_list[0][1], r_list[0][1], 1, mat1 );
     tmm_scalar_division(mat1, t_list[0][1]);
+    tmm_matrix_copy(2, Mtilde, Mtilde_copy);
     // TODO: validate existing matrix product function
     // TODO: may have to update or new function to return updated Mtilde from mat product
-    tmm_matrix_product(mat1, Mtilde, Mtilde);
+    // tmm_matrix_product(mat1, Mtilde, Mtilde);
+    tmm_matrix_product(mat1, Mtilde_copy, Mtilde);
 
     // Net complex transmission and reflection amplitudes
     const double complex r_coeff = Mtilde[1][0] / Mtilde[0][0];
@@ -871,8 +881,8 @@ uint8_t position_resolved(
     }
 
     // Amplitude of forward-moving wave is Ef, backwards is Eb
-    const double complex Ef = v * exp(1 * I * kz * distance);
-    const double complex Eb = w * exp(-1 * I * kz * distance);
+    const double complex Ef = v * cexp(1 * I * kz * distance);
+    const double complex Eb = w * cexp(-1 * I * kz * distance);
 
     // Poynting vector
     double complex poyn;
@@ -959,7 +969,8 @@ uint8_t find_in_structure(
     {
         if (d_list[i] == INFINITY)
         {
-            return 1;  // error; this function expects finite arguments
+            printf("this function expects finite arguments\n");
+            return 1;  // error
         }
     }
     if (distance < 0.0)
