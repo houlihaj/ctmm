@@ -9,6 +9,20 @@
 #include <stdbool.h>
 
 
+//----------------------------------------------------------------------------------
+// Some basic Defines
+//----------------------------------------------------------------------------------
+#ifndef PI
+    #define PI 3.14159265358979323846f
+#endif
+#ifndef DEG2RAD
+    #define DEG2RAD (PI / 180.0f)
+#endif
+#ifndef RAD2DEG
+    #define RAD2DEG (180.0f / PI)
+#endif
+
+
 typedef struct {
     double complex poyn;
     double complex absor;

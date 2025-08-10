@@ -2,41 +2,13 @@
 // Created by johnh on 8/2/2025.
 //
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <complex.h>
 #include <math.h>
 #include "tmm_absorp_fn.h"
 #include "tmm_coherent.h"
-
-
-// /**
-//  * @brief Absorption in a given layer is a pretty simple analytical function.
-//  *
-//  * The sum of four exponentials.
-//  *
-//  *   a(z) = A1*exp(a1*z) + A2*exp(-a1*z)
-//  *          + A3*exp(1j*a3*z) + conj(A3)*exp(-1j*a3*z)
-//  *
-//  * where a(z) is absorption at depth z, with z=0 being the start of the layer,
-//  * and A1,A2,a1,a3 are real numbers, with a1>0, a3>0, and A3 is complex.
-//  * The class stores these five parameters, as well as d, the layer thickness.
-//  *
-//  * This gives absorption as a fraction of intensity coming towards the first
-//  * layer of the stack.
-//  *
-//  *
-//  * This struct holds integer values for the x and y coordinates.
-//  */
-// typedef struct {
-//     double complex d;
-//     double complex a1;
-//     double complex a2;
-//     double complex a3;
-//     double complex A1;
-//     double complex A2;
-//     double complex A3;
-// } AbsorpAnalyticFn;
 
 
 /**
@@ -59,7 +31,6 @@ uint8_t AbsorpAnalyticFn_create(AbsorpAnalyticFn self)
  */
 uint8_t AbsorpAnalyticFn_destroy(AbsorpAnalyticFn self)
 {
-    // free( (void*)self );  // TODO: must free the memory properly
     return 0;
 }
 
@@ -72,16 +43,49 @@ uint8_t AbsorpAnalyticFn_destroy(AbsorpAnalyticFn self)
  * @return
  */
 uint8_t fill_in(
-    // AbsorpAnalyticFn* self, CohTmmData* coh_tmm_data, int layer
-    AbsorpAnalyticFn* self
+    AbsorpAnalyticFn* self, CohTmmData* coh_tmm_data, int layer
+    // AbsorpAnalyticFn* self
 )
 {
-    // Temporary!!!
-    self->a1 = 1.0;
-    self->d = 10.0;
+    uint8_t pol = coh_tmm_data->pol;
+    // double v = coh_tmm_data->vw_list[layer][0];
+    // double w = coh_tmm_data->vw_list[layer][1];
+    const double complex kz = coh_tmm_data->kz_list[layer];
+    const double complex n = coh_tmm_data->n_list[layer];
+    const double complex n_0 = coh_tmm_data->n_list[0];
+    const double th_0 = coh_tmm_data->th_0;
+    const double complex th = coh_tmm_data->th_list[layer];
+    self->d = coh_tmm_data->d_list[layer];
 
-    self->A1 = 1.0 + 0.0 * I;
-    self->A2 = 1.2857 + 13.660 * I;  // Aluminum at 1.5 micron
+    self->a1 = 2 * cimag(kz);
+    self->a3 = 2 * creal(kz);
+
+    double temp;
+    if (pol == 0)  // s-polarization
+    {
+        temp = (
+            cimag(n * cos(th) * kz) / creal(n_0 * cos(th_0))
+        );
+        // self->A1 = temp * abs(w) ** 2;
+        // self->A2 = temp * abs(v) ** 2;
+        // self->A3 = temp * v * conj(w);
+    } else  // p-polarization
+    {
+        temp = (
+            creal(2 * cimag(kz) * creal( n * cos(conj(th)) ))
+            / creal( n_0 * conj(cos(th_0)) )
+        );
+        // self->A1 = temp * abs(w) ** 2;
+        // self->A2 = temp * abs(v) ** 2;
+        // self->A3 = (
+        //     v
+        //     * conj(w)
+        //     * (
+        //         -2 * creal(kz) * cimag(n * cos(conj(th)) )
+        //         / creal( n_0 * conj(cos(th_0)) )
+        //     )
+        // );
+    }
 
     return 0;
 }
@@ -89,6 +93,8 @@ uint8_t fill_in(
 
 /**
  * @brief Create copy of an AbsorpAnalyticFn object (i.e. C struct)
+ *
+ * Done!!!
  *
  * @param self
  * @param a The AbsorpAnalyticFn copy
@@ -110,12 +116,22 @@ uint8_t copy(const AbsorpAnalyticFn* self, AbsorpAnalyticFn* a)
  * @brief Compute absorption at a given depth z, where z = 0 is the
  * start of the layer
  *
+ * Done!!!
+ *
  * @param self
  * @param z
  * @return
  */
-uint8_t run(AbsorpAnalyticFn* self, const double z)
+uint8_t run(
+    AbsorpAnalyticFn* self, const double z, double complex* absorp
+)
 {
+    *absorp = (
+        self->A1 * exp(self->a1 * z)
+        + self->A2 * exp(-self->a1 * z)
+        + self->A3 * cexp(1 * I * self->a3 * z)
+        + conj(self->A3) * cexp(-1 * I * self->a3 * z)
+    );
     return 0;
 }
 
@@ -123,7 +139,9 @@ uint8_t run(AbsorpAnalyticFn* self, const double z)
 /**
  * @brief Flip the function front-to-back
  *
- * To describe a(d-z) instead of a(z), where d is layer thickness.
+ * Done!!!
+ *
+ * To describe a(d - z) instead of a(z), where d is layer thickness.
  *
  * @param self
  * @return
@@ -134,13 +152,15 @@ uint8_t flip(AbsorpAnalyticFn* self)
     const double complex newA2 = self->A1 * exp(self->a1 * self->d);
     self->A1 = newA1;
     self->A2 = newA2;
-    self->A3 = conj(self->A3 * exp(I * self->a3 * self->d));
+    self->A3 = conj(self->A3 * cexp(I * self->a3 * self->d));
     return 0;
 }
 
 
 /**
  * @brief Multiplies the absorption at each point by "factor".
+ *
+ * Done!!!
  *
  * @param self
  * @param factor
@@ -158,12 +178,19 @@ uint8_t scale(AbsorpAnalyticFn* self, const double factor)
 /**
  * @brief Adds another compatible absorption analytical function
  *
+ * Done!!!
+ *
  * @param self
  * @param b Another compatible absorption analytical function
  * @return
  */
 uint8_t add(AbsorpAnalyticFn* self, const AbsorpAnalyticFn* b)
 {
+    if (b->a1 != self->a1 || b->a3 != self->a3)
+    {
+        printf("[ValueError] Incompatible absorption analytical functions!");
+        return 1;  // error
+    }
     self->A1 += b->A1;
     self->A2 += b->A2;
     self->A3 += b->A3;

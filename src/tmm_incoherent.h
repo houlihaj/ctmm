@@ -8,28 +8,23 @@
 
 #include <stdint.h>
 #include <complex.h>
+#include "tmm_coherent.h"
 
 
 /**
- * @brief asdfas
+ * @brief Incoherent TMM Data struct
  *
  *
  */
 typedef struct {
-    double complex r;  // complex reflection amplitude (i.e. reflection coefficient)
-    double complex t;  // complex transmission amplitude (i.e. transmission coefficient)
-    double R;  // real reflectivity
     double T;  // real transmissivity
-    double power_entering;
-    double* vw_list;
-    double complex* kz_list;
-    double complex* th_list;
-    double complex* n_list;
-    double* d_list;
-    double pol;
-    double th_0;
-    double lam_vac;
-    uint8_t num_layers;
+    double R;  // real reflectivity
+    double* VW_list;
+    double* power_entering_list;
+    double complex* stackFB_list;
+    CohTmmData* coh_tmm_data_list;
+    CohTmmData* coh_tmm_bdata_list;
+    uint8_t num_inc_layers;
 } IncTmmData;
 
 

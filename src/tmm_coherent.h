@@ -25,9 +25,9 @@ typedef struct {
     double complex* th_list;
     double complex* n_list;
     double* d_list;
-    double pol;
     double th_0;
     double lam_vac;
+    uint8_t pol;
     uint8_t num_layers;
 } CohTmmData;
 
