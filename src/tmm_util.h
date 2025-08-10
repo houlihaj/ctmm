@@ -6,6 +6,15 @@
 #define TMM_UTIL_H
 
 
+uint8_t tmm_make_2x2_array(
+    double complex a,
+    double complex b,
+    double complex c,
+    double complex d,
+    double complex matrix[2][2]
+);
+
+
 uint8_t tmm_array_zeros();
 
 

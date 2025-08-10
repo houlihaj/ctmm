@@ -24,15 +24,6 @@ typedef struct {
 } EllipsData;
 
 
-uint8_t make_2x2_array(
-    double complex a,
-    double complex b,
-    double complex c,
-    double complex d,
-    double complex matrix[2][2]
-);
-
-
 uint8_t is_forward_angle(double complex n, double theta, bool* answer);
 
 
@@ -191,7 +182,13 @@ uint8_t absorp_in_each_layer(
 //
 //
 // uint8_t inc_tmm(
-//     uint8_t pol, double n_list[], double d_list[], double c_list[], double th_0, double lam_vac
+//     uint8_t pol,
+//     double complex n_list[],
+//     double d_list[],
+//     uint8_t c_list[],
+//     uint8_t num_layers,
+//     double th_0,
+//     double lam_vac
 // );
 //
 //

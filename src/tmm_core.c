@@ -33,38 +33,6 @@ typedef enum
 
 
 /**
- * @brief Makes a 2x2 array of [[a,b],[c,d]]
- *
- * Done!!!
- *
- * Must declare the matrix in the outer scope and pass it into
- * this function for initialization of the elements
- *
- * @param a
- * @param b
- * @param c
- * @param d
- * @param matrix 2x2 array
- * @return
- */
-uint8_t make_2x2_array(
-    const double complex a,
-    const double complex b,
-    const double complex c,
-    const double complex d,
-    double complex matrix[2][2]
-)
-{
-    matrix[0][0] = a;
-    matrix[0][1] = b;
-    matrix[1][0] = c;
-    matrix[1][1] = d;
-
-    return 0;
-}
-
-
-/**
  * @brief Compute whether-or-not this is the forward-traveling wave
  *
  * Done!!!
@@ -597,17 +565,17 @@ uint8_t coh_tmm(
     for (int i = 1; i < num_layers - 1; i++)
     {
         double complex mat1[2][2];
-        make_2x2_array( cexp(-1 * I * delta[i]), 0, 0, cexp(1 * I * delta[i]), mat1 );
+        tmm_make_2x2_array( cexp(-1 * I * delta[i]), 0, 0, cexp(1 * I * delta[i]), mat1 );
 
         double complex mat2[2][2];
-        make_2x2_array( 1, r_list[i][i + 1], r_list[i][i + 1], 1, mat2 );
+        tmm_make_2x2_array( 1, r_list[i][i + 1], r_list[i][i + 1], 1, mat2 );
 
         tmm_matrix_product(mat1, mat2, M_list[i]);
         tmm_scalar_product(M_list[i], (1 / t_list[i][i + 1]));
         // tmm_scalar_division(M_list[i], t_list[i][i + 1]);  // same results as scalar product
     }
     double complex Mtilde[2][2];
-    make_2x2_array(1, 0, 0, 1, Mtilde);
+    tmm_make_2x2_array(1, 0, 0, 1, Mtilde);
     double complex Mtilde_copy[2][2];
     for (int i = 1; i < num_layers - 1; i++)
     {
@@ -615,7 +583,7 @@ uint8_t coh_tmm(
         tmm_matrix_product(Mtilde_copy, M_list[i], Mtilde);
     }
     double complex mat1[2][2];
-    make_2x2_array( 1, r_list[0][1], r_list[0][1], 1, mat1 );
+    tmm_make_2x2_array( 1, r_list[0][1], r_list[0][1], 1, mat1 );
     tmm_scalar_division(mat1, t_list[0][1]);
     tmm_matrix_copy(2, Mtilde, Mtilde_copy);
     tmm_matrix_product(mat1, Mtilde_copy, Mtilde);
