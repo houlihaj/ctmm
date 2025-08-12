@@ -622,10 +622,14 @@ uint8_t coh_tmm(
     // Store the data in the struct
     for (int i = 0; i < num_layers; i++)
     {
-        // coh_tmm_data->vw_list[i] = vw_list[i];  // vw_list is an array whose items are an array of size 2
+        for (int j = 0; j < 2; j++)
+        {
+            coh_tmm_data->vw_list[i * 2] = vw_list[i][0];  // TODO: needs thorough validation
+            coh_tmm_data->vw_list[i * 2 + 1] = vw_list[i][1];  // TODO: needs thorough validation
+        }
         coh_tmm_data->kz_list[i] = kz_list[i];
         coh_tmm_data->th_list[i] = th_list[i];
-        coh_tmm_data->n_list[i] = n_list[i];  // assign items in n_list to coh_tmm_data->n_list
+        coh_tmm_data->n_list[i] = n_list[i];
         coh_tmm_data->d_list[i] = d_list[i];
     }
     coh_tmm_data->r = r_coeff;
@@ -764,12 +768,10 @@ uint8_t unpolarized_RT(
 
 
 /**
- * @brief Calculate the Poynting vector, absorbed energy density, and E-field at a specific location.
+ * @brief Calculate the Poynting vector, absorbed energy density,
+ * and E-field at a specific location.
  *
- * TODO: Not Implemented!!!
- *
- * TODO: must finished implementation!!! Special attention
- * TODO: to absorption computation
+ * Done!!!
  *
  * @param layer
  * @param distance
@@ -790,12 +792,10 @@ uint8_t position_resolved(
     if (layer > 0)
     {
         // TODO: v,w = coh_tmm_data["vw_list"][layer]
-        // const double complex v = coh_tmm_data->vw_list[layer][0];
-        // const double complex w = coh_tmm_data->vw_list[layer][1];
-
-        // Temporary so I can implement the rest of the function
-        v = coh_tmm_data->r;
-        w = 1;
+        // v = coh_tmm_data->vw_list[layer][0];
+        v = coh_tmm_data->vw_list[layer * 2];  // TODO: needs thorough validation
+        // w = coh_tmm_data->vw_list[layer][1];
+        w = coh_tmm_data->vw_list[layer * 2 + 1];  // TODO: needs thorough validation
     }
     else
     {
@@ -811,7 +811,7 @@ uint8_t position_resolved(
 
     if (
         !(
-            layer >= 1 && 0 <= distance <= coh_tmm_data->d_list[layer]
+            (layer >= 1) && (0 <= distance && distance <= coh_tmm_data->d_list[layer])
             || layer == 0 && distance <= 0
         )
     )
@@ -843,16 +843,25 @@ uint8_t position_resolved(
     double complex absor;
     if (pol == 0)  // s-polarization
     {
+        double complex Esum = Ef + Eb;
         absor = (
-            // cimag( n * cos(th) * kz * abs(Ef + Eb) ** 2 )  // make permanent
-            cimag( n * cos(th) * kz * abs(Ef + Eb) * 2 )  // temp
+            cimag( n * cos(th) * kz * ( creal(Esum) * creal(Esum) + cimag(Esum) * cimag(Esum) ) )
             / creal( n_0 * cos(th_0) )
         );
     } else  // p-polarization
     {
+        double complex Esum = Ef + Eb;
+        double complex Ediff = Ef - Eb;
         absor = (
-            // cimag( n * conj( cos(th) ) * ( kz * abs(Ef - Eb) ** 2 - conj(kz) * abs(Ef + Eb) ** 2 ) )  // make permanent
-            cimag( n * conj( cos(th) ) * ( kz * abs(Ef - Eb) * 2 - conj(kz) * abs(Ef + Eb) * 2 ) )  // temp
+            cimag(
+                n * conj(cos(th))
+                * (
+                    kz
+                    * ( creal(Ediff) * creal(Ediff) + cimag(Ediff) * cimag(Ediff) )
+                    - conj(kz)
+                    * ( creal(Esum) * creal(Esum) + cimag(Esum) * cimag(Esum) )
+                )
+            )
             / creal( n_0 * conj( cos(th_0) ) )
         );
     }

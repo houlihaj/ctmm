@@ -20,7 +20,7 @@ typedef struct {
     double R;  // real reflectivity
     double T;  // real transmissivity
     double power_entering;
-    double* vw_list;
+    double complex* vw_list;
     double complex* kz_list;
     double complex* th_list;
     double complex* n_list;

@@ -9,23 +9,6 @@
 #include "tmm_coherent.h"
 
 
-// // Define a struct for a Point in 2D space
-// struct Point {
-//     int x;
-//     int y;
-// };
-//
-// int main() {
-//     // Declare and initialize a Point
-//     struct Point p1 = { .x = 10, .y = 20 };
-//
-//     // Access members
-//     printf("Point coordinates: (%d, %d)\n", p1.x, p1.y);
-//
-//     return 0;
-// }
-
-
 /**
  * @brief Absorption in a given layer is a pretty simple analytical function.
  *
@@ -55,15 +38,8 @@ typedef struct {
 } AbsorpAnalyticFn;
 
 
-uint8_t AbsorpAnalyticFn_create(AbsorpAnalyticFn self);
-
-
-uint8_t AbsorpAnalyticFn_destroy(AbsorpAnalyticFn self);
-
-
 uint8_t fill_in(
     AbsorpAnalyticFn* self, CohTmmData* coh_tmm_data, int layer
-    // AbsorpAnalyticFn* self
 );
 
 

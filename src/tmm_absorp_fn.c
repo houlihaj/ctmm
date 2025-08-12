@@ -14,42 +14,21 @@
 /**
  * @brief
  *
- * @param self
- * @return
- */
-uint8_t AbsorpAnalyticFn_create(AbsorpAnalyticFn self)
-{
-    return 0;
-}
-
-
-/**
- * @brief
- *
- * @param self
- * @return
- */
-uint8_t AbsorpAnalyticFn_destroy(AbsorpAnalyticFn self)
-{
-    return 0;
-}
-
-
-/**
- * @brief
+ * Done!!!
  *
  * @param
  * @param
  * @return
  */
 uint8_t fill_in(
-    AbsorpAnalyticFn* self, CohTmmData* coh_tmm_data, int layer
-    // AbsorpAnalyticFn* self
+    AbsorpAnalyticFn* self, CohTmmData* coh_tmm_data, const int layer
 )
 {
-    uint8_t pol = coh_tmm_data->pol;
+    const uint8_t pol = coh_tmm_data->pol;
     // double v = coh_tmm_data->vw_list[layer][0];
+    const double complex v = coh_tmm_data->vw_list[layer * 2];  // TODO: needs thorough validation
     // double w = coh_tmm_data->vw_list[layer][1];
+    const double complex w = coh_tmm_data->vw_list[layer * 2 + 1];  // TODO: needs thorough validation
     const double complex kz = coh_tmm_data->kz_list[layer];
     const double complex n = coh_tmm_data->n_list[layer];
     const double complex n_0 = coh_tmm_data->n_list[0];
@@ -66,25 +45,25 @@ uint8_t fill_in(
         temp = (
             cimag(n * cos(th) * kz) / creal(n_0 * cos(th_0))
         );
-        // self->A1 = temp * abs(w) ** 2;
-        // self->A2 = temp * abs(v) ** 2;
-        // self->A3 = temp * v * conj(w);
+        self->A1 = temp * creal(w) * creal(w) + cimag(w) * cimag(w);
+        self->A2 = temp * creal(v) * creal(v) + cimag(v) * cimag(v);
+        self->A3 = temp * v * conj(w);
     } else  // p-polarization
     {
         temp = (
             creal(2 * cimag(kz) * creal( n * cos(conj(th)) ))
             / creal( n_0 * conj(cos(th_0)) )
         );
-        // self->A1 = temp * abs(w) ** 2;
-        // self->A2 = temp * abs(v) ** 2;
-        // self->A3 = (
-        //     v
-        //     * conj(w)
-        //     * (
-        //         -2 * creal(kz) * cimag(n * cos(conj(th)) )
-        //         / creal( n_0 * conj(cos(th_0)) )
-        //     )
-        // );
+        self->A1 = temp * creal(w) * creal(w) + cimag(w) * cimag(w);
+        self->A2 = temp * creal(v) * creal(v) + cimag(v) * cimag(v);
+        self->A3 = (
+            v
+            * conj(w)
+            * (
+                -2 * creal(kz) * cimag(n * cos(conj(th)) )
+                / creal( n_0 * conj(cos(th_0)) )
+            )
+        );
     }
 
     return 0;
