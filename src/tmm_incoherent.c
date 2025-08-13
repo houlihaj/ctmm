@@ -62,3 +62,69 @@ uint8_t IncTmmData_destroy(IncTmmData* self)
     return 0;
 }
 
+
+/**
+ * @brief Initialize IncTmmData structure passed by pointer.
+ *
+ * @param self
+ * @param num_layers
+ * @return
+ */
+uint8_t IncGroupLayersData_create(IncGroupLayersData* self, const uint8_t num_layers)
+{
+    self->num_layers = num_layers;
+
+    self->stack_d_list = malloc((num_layers * 2) * sizeof(double));
+    self->stack_n_list = malloc(num_layers * sizeof(double complex));
+    self->all_from_inc = malloc(num_layers * sizeof(uint8_t));
+    self->inc_from_all = malloc(num_layers * sizeof(uint8_t));
+    self->all_from_stack = malloc(num_layers * sizeof(uint8_t));
+    self->stack_from_all = malloc(num_layers * sizeof(uint8_t));
+    self->inc_from_stack = malloc(num_layers * sizeof(uint8_t));
+    self->stack_from_inc = malloc(num_layers * sizeof(uint8_t));
+
+    if (
+        !self->stack_d_list
+        || !self->stack_n_list
+        || !self->all_from_inc
+        || !self->inc_from_all
+        || !self->all_from_stack
+        || !self->stack_from_all
+        || !self->inc_from_stack
+        || !self->stack_from_inc
+    )
+    {
+        fprintf(stderr, "Error allocating memory for at least one array\n");
+        free(self->stack_d_list);
+        free(self->stack_n_list);
+        free(self->all_from_inc);
+        free(self->inc_from_all);
+        free(self->all_from_stack);
+        free(self->stack_from_all);
+        free(self->inc_from_stack);
+        free(self->stack_from_inc);
+        return 1;  // Return error code
+    }
+
+    return 0;
+}
+
+
+/**
+ * @brief Free memory allocated for IncTmmData and its members.
+ *
+ * @param self
+ * @return
+ */
+uint8_t IncGroupLayersData_destroy(IncGroupLayersData* self)
+{
+    free(self->stack_d_list);
+    free(self->stack_n_list);
+    free(self->all_from_inc);
+    free(self->inc_from_all);
+    free(self->all_from_stack);
+    free(self->stack_from_all);
+    free(self->inc_from_stack);
+    free(self->stack_from_inc);
+    return 0;
+}

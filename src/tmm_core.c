@@ -17,6 +17,7 @@
 #include "tmm_absorp_fn.h"
 #include "tmm_coherent.h"
 #include "tmm_core.h"
+#include "tmm_incoherent.h"
 #include "tmm_math.h"
 #include "tmm_util.h"
 
@@ -1052,18 +1053,22 @@ uint8_t absorp_in_each_layer(
  * c_list is "coherency list". Each entry should be 'i' for incoherent or 'c'
  * for 'coherent'.
  *
+ * @param inc_group_layers_data
  * @param n_list
  * @param d_list
- * @param num_layers Number of layers
+ * @param num_layers Number of layers; same as size of n_list and d_list
  * @param c_list coherency list; entries should be 'i' (0) for incoherent or
  *     'c' (1) for 'coherent'
+ * @param num_inc_layers Number of incoherent layers in c_list
  * @return
  */
 uint8_t inc_group_layers(
+    IncGroupLayersData* inc_group_layers_data,
     double complex n_list[],
     double d_list[],
     uint8_t c_list[],
-    const uint8_t num_layers
+    const uint8_t num_layers,
+    const uint8_t num_inc_layers
 )
 {
     // d_list must start and end with INFINITY
@@ -1083,6 +1088,16 @@ uint8_t inc_group_layers(
 
     uint8_t inc_index = 0;
     uint8_t stack_index = 0;
+
+    double* stack_d_list = inc_group_layers_data->stack_d_list;
+    double complex* stack_n_list = inc_group_layers_data->stack_n_list;
+    uint8_t* all_from_inc = inc_group_layers_data->all_from_inc;
+    uint8_t* inc_from_all = inc_group_layers_data->inc_from_all;
+    uint8_t* all_from_stack = inc_group_layers_data->all_from_stack;
+    uint8_t* stack_from_all = inc_group_layers_data->stack_from_all;
+    uint8_t* inc_from_stack = inc_group_layers_data->inc_from_stack;
+    uint8_t* stack_from_inc = inc_group_layers_data->stack_from_inc;
+
     bool stack_in_progress = false;
 
     for (int alllayer_index = 0; alllayer_index < num_layers; alllayer_index++)
@@ -1094,6 +1109,7 @@ uint8_t inc_group_layers(
             if (!stack_in_progress)  // this layer is starting new stack
             {
                 stack_in_progress = true;
+                // TODO: ongoing_stack_d_list = [inf, d_list[alllayer_index]]
                 uint8_t within_stack_index = 1;
             } else  // another coherent layer in the same stack
             {
@@ -1108,6 +1124,7 @@ uint8_t inc_group_layers(
                 printf("previous layer was also incoherent");
             } else  // previous layer was coherent
             {
+                stack_in_progress = false;
                 printf("previous layer was coherent");
             }
 
@@ -1118,6 +1135,18 @@ uint8_t inc_group_layers(
         }
     }
 
+    // inc_group_layers_data->stack_d_list = stack_d_list;
+    // inc_group_layers_data->stack_n_list = stack_n_list;
+    // inc_group_layers_data->all_from_inc = all_from_inc;
+    // inc_group_layers_data->inc_from_all = inc_from_all;
+    // inc_group_layers_data->all_from_stack = all_from_stack;
+    // inc_group_layers_data->stack_from_all = stack_from_all;
+    // inc_group_layers_data->inc_from_stack = inc_from_stack;
+    // inc_group_layers_data->stack_from_inc = stack_from_inc;
+    // inc_group_layers_data->num_stacks = num_stacks;
+    inc_group_layers_data->num_inc_layers = num_inc_layers;
+    inc_group_layers_data->num_layers = num_layers;
+
     return 0;
 }
 
@@ -1125,7 +1154,7 @@ uint8_t inc_group_layers(
 /**
  * @brief Incoherent, or partly-incoherent-partly-coherent, transfer matrix method.
  *
- *
+ * TODO: must implement!!!
  *
  * @param pol
  * @param n_list
@@ -1226,11 +1255,43 @@ uint8_t inc_tmm(
 /**
  * @brief
  *
- * @param inc_data
+ * TODO: must implement!!!
+ *
+ * @param inc_tmm_data
+ * @param absorp_list
  * @return
  */
-uint8_t inc_absorp_in_each_layer(double inc_data)
+uint8_t inc_absorp_in_each_layer(
+    IncTmmData* inc_tmm_data, double absorp_list[]
+)
 {
+    const uint8_t num_inc_layers = inc_tmm_data->num_inc_layers;
+
+    // inc_tmm_data->stack_from_inc;  // TODO: must add member to struct
+    double* power_entering_list = inc_tmm_data->power_entering_list;
+    double complex* stackFB_list = inc_tmm_data->stackFB_list;
+
+    for (int i = 0; i < num_inc_layers - 1; i++)
+    {
+        if (true)
+        {
+            // case that incoherent layer i is right before another incoherent layer
+            absorp_list[i] = power_entering_list[i] - power_entering_list[i + 1];
+        } else  // incoherent layer i is immediately before a coherent stack
+        {
+            uint8_t j = 2;  // TODO: temporary placeholder for stack_from_inc
+            CohTmmData coh_tmm_data = inc_tmm_data->coh_tmm_data_list[j];
+            CohTmmData coh_tmm_bdata = inc_tmm_data->coh_tmm_bdata_list[j];
+            // First, power in the incoherent layer...
+            // TODO: temporary!!!
+            absorp_list[i] = power_entering_list[i] - power_entering_list[i + 1];
+            // Next, power in the coherent stack...
+        }
+    }
+
+    // final semi-infinite layer
+    absorp_list[num_inc_layers - 1] = inc_tmm_data->T;
+
     return 0;
 }
 
@@ -1242,10 +1303,29 @@ uint8_t inc_absorp_in_each_layer(double inc_data)
  * inc_data is output of inc_tmm()
  *
  * @param layer
- * @param inc_data
+ * @param inc_tmm_data
  * @return
  */
-uint8_t inc_find_absorp_analytic_fn(uint8_t layer, double inc_data)
+uint8_t inc_find_absorp_analytic_fn(
+    uint8_t layer,
+    IncTmmData* inc_tmm_data
+)
 {
+    // TODO: fix this!!!
+    // double j = inc_tmm_data->stack_from_all[layer];
+
+    AbsorpAnalyticFn forward_absorp_fn;
+    CohTmmData coh_tmm_data;
+    fill_in(&forward_absorp_fn, &coh_tmm_data, layer);
+    // scale(&forward_absorp_fn, );
+    flip(&forward_absorp_fn);
+
+    AbsorpAnalyticFn back_absorp_fn;
+    fill_in(&back_absorp_fn, &coh_tmm_data, layer);
+    // scale(&back_absorp_fn, );
+    flip(&back_absorp_fn);
+
+    add(&forward_absorp_fn, &back_absorp_fn);
+
     return 0;
 }
