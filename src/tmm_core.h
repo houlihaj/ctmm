@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 #include "tmm_coherent.h"
+#include "tmm_incoherent.h"
 
 
 //----------------------------------------------------------------------------------
@@ -193,15 +194,25 @@ uint8_t absorp_in_each_layer(
 );
 
 
-// uint8_t inc_group_layers(double n_list[], double d_list[], double c_list[]);
-//
-//
+uint8_t inc_group_layers(
+    IncGroupLayersData* inc_group_layers_data,
+    double complex n_list[],
+    double d_list[],
+    uint8_t c_list[],
+    uint8_t num_layers,
+    uint8_t num_inc_layers,
+    uint8_t num_stacks
+);
+
+
 // uint8_t inc_tmm(
 //     uint8_t pol,
 //     double complex n_list[],
 //     double d_list[],
 //     uint8_t c_list[],
 //     uint8_t num_layers,
+//     uint8_t num_inc_layers,
+//     uint8_t num_stacks,
 //     double th_0,
 //     double lam_vac
 // );

@@ -1048,18 +1048,30 @@ uint8_t absorp_in_each_layer(
 /**
  * @brief Helper function for inc_tmm. Groups and sorts layer information.
  *
+ * TODO: must thoroughly validate implementation!!!
+ *
  * See coh_tmm for definitions of n_list, d_list.
  *
  * c_list is "coherency list". Each entry should be 'i' for incoherent or 'c'
  * for 'coherent'.
  *
+ * A "stack" is a group of one or more consecutive coherent layers. A "stack
+ * index" labels the stacks 0,1,2,.... The "within-stack index" counts the
+ * coherent layers within the stack 1,2,3... [index 0 is the incoherent layer
+ * before the stack starts]
+ *
+ * An "incoherent layer index" labels the incoherent layers 0,1,2,...
+ *
+ * An "alllayer index" labels all layers (all elements of d_list) 0,1,2,...
+ *
  * @param inc_group_layers_data
  * @param n_list
  * @param d_list
- * @param num_layers Number of layers; same as size of n_list and d_list
  * @param c_list coherency list; entries should be 'i' (0) for incoherent or
  *     'c' (1) for 'coherent'
- * @param num_inc_layers Number of incoherent layers in c_list
+ * @param num_layers Number of layers; same as size of n_list and d_list
+ * @param num_inc_layers
+ * @param num_stacks
  * @return
  */
 uint8_t inc_group_layers(
@@ -1068,7 +1080,8 @@ uint8_t inc_group_layers(
     double d_list[],
     uint8_t c_list[],
     const uint8_t num_layers,
-    const uint8_t num_inc_layers
+    const uint8_t num_inc_layers,
+    const uint8_t num_stacks
 )
 {
     // d_list must start and end with INFINITY
@@ -1086,6 +1099,26 @@ uint8_t inc_group_layers(
         return 1;  // return with error
     }
 
+    // // count the number of incoherent layers in c_list
+    // uint8_t num_inc_layers = 0;  // number of incoherent layers
+    // for (int i = 0; i < num_layers; i++)
+    // {
+    //     if (c_list[i] == 0)  // incoherent layer
+    //     {
+    //         num_inc_layers++;
+    //     }
+    // }
+    //
+    // // count the number of stacks in c_list
+    // uint8_t num_stacks = 0;  // number of stacks
+    // for (int i = 1; i < num_layers; i++)
+    // {
+    //     if (c_list[i - 1] == 0 && c_list[i] == 1)
+    //     {
+    //         num_stacks++;
+    //     }
+    // }
+
     uint8_t inc_index = 0;
     uint8_t stack_index = 0;
 
@@ -1098,52 +1131,101 @@ uint8_t inc_group_layers(
     uint8_t* inc_from_stack = inc_group_layers_data->inc_from_stack;
     uint8_t* stack_from_inc = inc_group_layers_data->stack_from_inc;
 
+    const uint8_t nan = 255;  // use in place of np.nan
+    uint8_t within_stack_index = 0;  // TODO: must validate!!! differs from TMM
+
+    double ongoing_stack_d_list[num_stacks * 2];
+    double complex ongoing_stack_n_list[num_stacks * 2];
+
     bool stack_in_progress = false;
 
     for (int alllayer_index = 0; alllayer_index < num_layers; alllayer_index++)
     {
         if (c_list[alllayer_index] == 1)  // coherent layer
         {
-            printf("coherent layer");
-            // TODO: inc_from_all.append(nan)
+            printf("coherent layer\n");
+            inc_from_all[alllayer_index] = nan;
             if (!stack_in_progress)  // this layer is starting new stack
             {
                 stack_in_progress = true;
-                // TODO: ongoing_stack_d_list = [inf, d_list[alllayer_index]]
-                uint8_t within_stack_index = 1;
+                ongoing_stack_d_list[stack_index * 2] = INFINITY;
+                ongoing_stack_d_list[stack_index * 2 + 1] = d_list[alllayer_index];
+                ongoing_stack_n_list[stack_index * 2] = n_list[alllayer_index - 1];
+                ongoing_stack_n_list[stack_index * 2 + 1] = n_list[alllayer_index];
+                stack_from_all[alllayer_index * 2] = stack_index;
+                stack_from_all[alllayer_index * 2 + 1] = 1;
+                all_from_stack[stack_index * 2] = alllayer_index - 1;
+                all_from_stack[stack_index * 2 + 1] = alllayer_index;
+                inc_from_stack[stack_index] = inc_index - 1;
+                within_stack_index = 1;
             } else  // another coherent layer in the same stack
             {
-                // TODO: within_stack_index += 1
+                ongoing_stack_d_list[stack_index * 2] = d_list[alllayer_index];
+                ongoing_stack_d_list[stack_index * 2 + 1] = d_list[alllayer_index];
+                ongoing_stack_n_list[stack_index * 2] = n_list[alllayer_index];
+                ongoing_stack_n_list[stack_index * 2 + 1] = n_list[alllayer_index];
+                within_stack_index++;
+                stack_from_all[alllayer_index * 2] = stack_index;
+                stack_from_all[alllayer_index * 2 + 1] = within_stack_index;
+                all_from_stack[(stack_index - 1) * 2] = alllayer_index;
+                all_from_stack[(stack_index - 1) * 2 + 1] = alllayer_index;
             }
 
         } else if (c_list[alllayer_index] == 0)  // incoherent layer
         {
-            printf("incoherent layer");
+            printf("incoherent layer\n");
+            stack_from_all[alllayer_index * 2] = nan;
+            stack_from_all[alllayer_index * 2 + 1] = nan;
+            inc_from_all[alllayer_index] = inc_index;
+            all_from_inc[inc_index] = alllayer_index;  // TODO: must validate!!!
             if (!stack_in_progress)  // previous layer was also incoherent
             {
-                printf("previous layer was also incoherent");
+                printf("previous layer was also incoherent\n");
+                stack_from_inc[inc_index] = nan;  // TODO: validate!!!
             } else  // previous layer was coherent
             {
+                printf("previous layer was coherent\n");
                 stack_in_progress = false;
-                printf("previous layer was coherent");
+                stack_from_inc[inc_index] = stack_index;  // TODO: validate!!!
+                // ongoing_stack_d_list[stack_index * 2] = INFINITY;
+                ongoing_stack_d_list[(stack_index - 1) * 2] = INFINITY;  // TODO: validate!!!
+                // ongoing_stack_d_list[stack_index * 2 + 1] = INFINITY;
+                ongoing_stack_d_list[(stack_index - 1) * 2 + 1] = INFINITY;  // TODO: validate!!!
+                for (int i = 0; i < stack_index * 2; i++)
+                {
+                    stack_d_list[i] = ongoing_stack_d_list[i];
+                }
+                // ongoing_stack_n_list[stack_index * 2] = n_list[alllayer_index];
+                ongoing_stack_n_list[(stack_index - 1) * 2] = n_list[alllayer_index];  // TODO: validate!!!
+                // ongoing_stack_n_list[stack_index * 2 + 1] = n_list[alllayer_index];
+                ongoing_stack_n_list[(stack_index - 1) * 2 + 1] = n_list[alllayer_index];  // TODO: validate!!!
+                for (int i = 0; i < stack_index * 2; i++)
+                {
+                    stack_n_list[i] = ongoing_stack_n_list[i];
+                }
+                all_from_stack[(stack_index - 1) * 2] = alllayer_index;
+                all_from_stack[(stack_index - 1) * 2 + 1] = alllayer_index;
+                stack_index++;
             }
+
+            inc_index++;
 
         } else
         {
-            printf("[ValueError] Error: c_list entries must be 'i' or 'c'!");
+            printf("[ValueError] Error: c_list entries must be 'i' or 'c'!\n");
             return 1;  // return with error
         }
     }
 
-    // inc_group_layers_data->stack_d_list = stack_d_list;
-    // inc_group_layers_data->stack_n_list = stack_n_list;
-    // inc_group_layers_data->all_from_inc = all_from_inc;
-    // inc_group_layers_data->inc_from_all = inc_from_all;
-    // inc_group_layers_data->all_from_stack = all_from_stack;
-    // inc_group_layers_data->stack_from_all = stack_from_all;
-    // inc_group_layers_data->inc_from_stack = inc_from_stack;
-    // inc_group_layers_data->stack_from_inc = stack_from_inc;
-    // inc_group_layers_data->num_stacks = num_stacks;
+    inc_group_layers_data->stack_d_list = stack_d_list;
+    inc_group_layers_data->stack_n_list = stack_n_list;
+    inc_group_layers_data->all_from_inc = all_from_inc;
+    inc_group_layers_data->inc_from_all = inc_from_all;
+    inc_group_layers_data->all_from_stack = all_from_stack;
+    inc_group_layers_data->stack_from_all = stack_from_all;
+    inc_group_layers_data->inc_from_stack = inc_from_stack;
+    inc_group_layers_data->stack_from_inc = stack_from_inc;
+    inc_group_layers_data->num_stacks = num_stacks;
     inc_group_layers_data->num_inc_layers = num_inc_layers;
     inc_group_layers_data->num_layers = num_layers;
 
@@ -1161,6 +1243,8 @@ uint8_t inc_group_layers(
  * @param d_list
  * @param c_list
  * @param num_layers
+ * @param num_inc_layers
+ * @param num_stacks
  * @param th_0
  * @param lam_vac
  * @return
@@ -1171,12 +1255,28 @@ uint8_t inc_tmm(
     double d_list[],
     uint8_t c_list[],
     const uint8_t num_layers,
+    const uint8_t num_inc_layers,
+    const uint8_t num_stacks,
     double th_0,
     double lam_vac
 )
 {
     // TODO: Input tests
-    // inc_group_layers(n_list, d_list, c_list);
+
+    // Get the incoherent group layers data
+    IncGroupLayersData inc_group_layers_data;
+    IncGroupLayersData_create(
+        &inc_group_layers_data, num_layers, num_inc_layers, num_stacks
+    );
+    inc_group_layers(
+        &inc_group_layers_data, n_list, d_list, c_list, num_layers, num_inc_layers, num_stacks
+    );
+    double complex* stack_n_list = inc_group_layers_data.stack_n_list;  // TODO: validate member access is correct
+    double* stack_d_list = inc_group_layers_data.stack_n_list;
+    uint8_t* all_from_stack = inc_group_layers_data.all_from_stack;
+    uint8_t* all_from_inc = inc_group_layers_data.all_from_inc;
+    uint8_t* stack_from_inc = inc_group_layers_data.stack_from_inc;
+    uint8_t* inc_from_stack = inc_group_layers_data.inc_from_stack;
 
     // th_list is a list with, for each layer, the angle that the light
     // travels through the layer. Computed with Snell's law. Note that
@@ -1186,21 +1286,32 @@ uint8_t inc_tmm(
 
     // coh_tmm_data_list[i] is the output of coh_tmm for the i'th stack
     // TODO: coh_tmm_data_list = []
+    CohTmmData coh_tmm_data_list[num_stacks];
     // coh_tmm_bdata_list[i] is the same stack as coh_tmm_data_list[i] but
     // with order of layers reversed
     // TODO: coh_tmm_bdata_list = []
+    CohTmmData coh_tmm_bdata_list[num_stacks];
 
-    // num_stacks placeholder
-    uint8_t num_stacks = 4;
     for (int i = 0; i < num_stacks; i++)
     {
-
+        // CohTmmData coh_tmm_data;  // allocate struct in outer scope
+        // const uint8_t num_coh_layers = (num_layers - num_inc_layers);
+        // CohTmmData_create(&coh_tmm_data, num_layers);
+        // coh_tmm(
+        //     pol,  // const uint8_t pol,
+        //     stack_n_list[i],  // const double complex n_list[],
+        //     stack_d_list[i],  // const double d_list[],
+        //     num_coh_layers,  // const uint8_t num_layers,
+        //     th_list[all_from_stack[i][0]],  // const double th_0,
+        //     lam_vac,  // const double lam_vac,
+        //     &coh_tmm_data  // CohTmmData* coh_tmm_data
+        // );
+        //
+        // coh_tmm_data_list[i] = coh_tmm_data;
     }
 
     // P_list[i] is fraction not absorbed in a single pass through i'th incoherent
     // layer.
-    // num_stacks placeholder
-    uint8_t num_inc_layers = 4;
     for (int inc_index = 1; inc_index < num_inc_layers - 1; inc_index++)
     {
 
@@ -1217,7 +1328,8 @@ uint8_t inc_tmm(
     tmm_matrix_zeros(num_inc_layers, r_list);
     for (int inc_index = 0; inc_index < num_inc_layers - 1; inc_index++)  // looking at interface i -> i + 1
     {
-
+        uint8_t alllayer_index = all_from_inc[inc_index];
+        uint8_t nextstack_index = stack_from_inc[inc_index + 1];
     }
 
     // L is the transfer matrix from the i'th to (i+1)st incoherent layer, see
@@ -1247,6 +1359,8 @@ uint8_t inc_tmm(
     {
 
     }
+
+    IncGroupLayersData_destroy(&inc_group_layers_data);
 
     return 0;
 }

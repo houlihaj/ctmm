@@ -49,4 +49,20 @@ typedef struct {
 } IncGroupLayersData;
 
 
+uint8_t IncTmmData_create(
+    IncTmmData* self, uint8_t num_inc_layers
+);
+
+
+uint8_t IncTmmData_destroy(IncTmmData* self);
+
+
+uint8_t IncGroupLayersData_create(
+    IncGroupLayersData* self, uint8_t num_layers, uint8_t num_inc_layers, uint8_t num_stacks
+);
+
+
+uint8_t IncGroupLayersData_destroy(IncGroupLayersData* self);
+
+
 #endif //TMM_INCOHERENT_H

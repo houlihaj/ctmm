@@ -68,20 +68,27 @@ uint8_t IncTmmData_destroy(IncTmmData* self)
  *
  * @param self
  * @param num_layers
+ * @param num_inc_layers
+ * @param num_stacks
  * @return
  */
-uint8_t IncGroupLayersData_create(IncGroupLayersData* self, const uint8_t num_layers)
+uint8_t IncGroupLayersData_create(
+    IncGroupLayersData* self,
+    const uint8_t num_layers,
+    const uint8_t num_inc_layers,
+    const uint8_t num_stacks
+)
 {
     self->num_layers = num_layers;
 
-    self->stack_d_list = malloc((num_layers * 2) * sizeof(double));
-    self->stack_n_list = malloc(num_layers * sizeof(double complex));
-    self->all_from_inc = malloc(num_layers * sizeof(uint8_t));
+    self->stack_d_list = malloc((num_stacks * 2) * sizeof(double));
+    self->stack_n_list = malloc((num_stacks * 2) * sizeof(double complex));
+    self->all_from_inc = malloc(num_inc_layers * sizeof(uint8_t));
     self->inc_from_all = malloc(num_layers * sizeof(uint8_t));
     self->all_from_stack = malloc(num_layers * sizeof(uint8_t));
-    self->stack_from_all = malloc(num_layers * sizeof(uint8_t));
-    self->inc_from_stack = malloc(num_layers * sizeof(uint8_t));
-    self->stack_from_inc = malloc(num_layers * sizeof(uint8_t));
+    self->stack_from_all = malloc((num_layers * 2) * sizeof(uint8_t));
+    self->inc_from_stack = malloc(num_stacks * sizeof(uint8_t));
+    self->stack_from_inc = malloc(num_inc_layers * sizeof(uint8_t));
 
     if (
         !self->stack_d_list
