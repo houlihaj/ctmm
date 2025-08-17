@@ -21,7 +21,7 @@ uint8_t IncTmmData_create(IncTmmData* self, const uint8_t num_inc_layers)
 
     self->VW_list = malloc((num_inc_layers * 2) * sizeof(double));
     self->power_entering_list = malloc(num_inc_layers * sizeof(double));
-    self->stackFB_list = malloc(num_inc_layers * sizeof(double complex));
+    self->stackFB_list = malloc((num_inc_layers * 2) * sizeof(double complex));
     self->coh_tmm_data_list = malloc(num_inc_layers * sizeof(CohTmmData));
     self->coh_tmm_bdata_list = malloc(num_inc_layers * sizeof(CohTmmData));
 

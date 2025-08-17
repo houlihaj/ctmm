@@ -6,14 +6,19 @@
 #define TMM_CORE_H
 
 
-#include <stdbool.h>
-#include "tmm_coherent.h"
-#include "tmm_incoherent.h"
+// #include <stdbool.h>
+// #include "tmm_coherent.h"
+// #include "tmm_incoherent.h"
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+#include <stdbool.h>
+#include "tmm_coherent.h"
+#include "tmm_incoherent.h"
 
 
 //----------------------------------------------------------------------------------

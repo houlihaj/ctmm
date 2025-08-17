@@ -5,13 +5,17 @@
 #ifndef TMM_COHERENT_H
 #define TMM_COHERENT_H
 
-#include <stdint.h>
-#include <complex.h>
+// #include <stdint.h>
+// #include <complex.h>
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+#include <stdint.h>
+#include <complex.h>
 
 
 /**

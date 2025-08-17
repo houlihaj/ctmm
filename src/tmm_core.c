@@ -1310,9 +1310,19 @@ uint8_t inc_tmm(
 
     // P_list[i] is fraction not absorbed in a single pass through i'th incoherent
     // layer.
-    for (int inc_index = 1; inc_index < num_inc_layers - 1; inc_index++)
+    double P_list[num_inc_layers];
+    for (int inc_index = 1; inc_index < num_inc_layers - 1; inc_index++)  // skip 0'th and last (infinite)
     {
-
+        uint8_t i = all_from_inc[inc_index];
+        P_list[inc_index] = (
+            exp( -4 * PI * d_list[i] * cimag(n_list[i] * cos(th_list[i])) / lam_vac )
+        );
+        // For a very opaque layer, reset P to avoid divide-by-0 and similar
+        // errors.
+        if (P_list[inc_index] < 1.0e-30)
+        {
+            P_list[inc_index] = 1.0e-30;
+        }
     }
 
     // T_list[i,j] and R_list[i,j] are transmission and reflection powers,
@@ -1436,6 +1446,24 @@ uint8_t inc_tmm(
     // stack and B is light traveling backwards towards n'th stack.
     // Reminder: inc_from_stack[i] = j means that the i'th stack comes after the
     // layer with incoherent index j.
+    // TODO: stackFB_list = []
+    double complex* stackFB_list = inc_group_layers_data.inc_tmm_data.stackFB_list;
+    for (int stack_i = 0; stack_i < num_inc_layers; stack_i++)  // TODO: must confirm inc_from_stack length in tmm_core.py
+    {
+        double F;
+        uint8_t prev_inc_index = inc_from_stack[stack_i];  // TODO: must validate!!!
+        if (prev_inc_index == 0)  // stack starts right after semi-infinite layer.
+        {
+            F = 1.0;
+        } else
+        {
+            F = VW_list[prev_inc_index][0] * P_list[prev_inc_index];
+        }
+        double B = VW_list[prev_inc_index + 1][1];
+        // TODO: stackFB_list.append([F,B])
+        stackFB_list[stack_i * 2] = F;  // TODO: must validate!!!
+        stackFB_list[stack_i * 2 + 1] = B;  // TODO: must validate!!!
+    }
 
     // power_entering_list[i] is the normalized Poynting vector crossing the
     // interface into the i'th incoherent layer from the previous (coherent or
@@ -1463,24 +1491,37 @@ uint8_t inc_tmm(
  * @return
  */
 uint8_t inc_absorp_in_each_layer(
-    IncTmmData* inc_tmm_data, double absorp_list[]
+    // IncTmmData* inc_tmm_data, double absorp_list[]
+    // TODO: confirm this is the proper approach
+    IncGroupLayersData* inc_group_layers_data,
+    IncTmmData* inc_tmm_data,
+    double absorp_list[]
 )
 {
+    // Reminder: inc_from_stack[i] = j means that the i'th stack comes after the
+    // layer with incoherent index j.
+    // Reminder: stack_from_inc[i] = j means that the layer
+    // with incoherent index i comes immediately after the j'th stack (or j=nan
+    // if it's not immediately following a stack).
+
     const uint8_t num_inc_layers = inc_tmm_data->num_inc_layers;
 
-    // inc_tmm_data->stack_from_inc;  // TODO: must add member to struct
+    uint8_t* stack_from_inc = inc_group_layers_data->stack_from_inc;  // TODO: must add member to struct
     double* power_entering_list = inc_tmm_data->power_entering_list;
+    // stackFB_list[n]=[F,B] means that F is light traveling forward towards n'th
+    // stack and B is light traveling backwards towards n'th stack.
     double complex* stackFB_list = inc_tmm_data->stackFB_list;
 
     for (int i = 0; i < num_inc_layers - 1; i++)
     {
-        if (true)
+        const uint8_t nan = 255;  // use in place of np.nan
+        if (stack_from_inc[i + 1] == nan)
         {
             // case that incoherent layer i is right before another incoherent layer
             absorp_list[i] = power_entering_list[i] - power_entering_list[i + 1];
         } else  // incoherent layer i is immediately before a coherent stack
         {
-            uint8_t j = 2;  // TODO: temporary placeholder for stack_from_inc
+            uint8_t j = stack_from_inc[i + 1];
             CohTmmData coh_tmm_data = inc_tmm_data->coh_tmm_data_list[j];
             CohTmmData coh_tmm_bdata = inc_tmm_data->coh_tmm_bdata_list[j];
             // First, power in the incoherent layer...
@@ -1509,20 +1550,35 @@ uint8_t inc_absorp_in_each_layer(
  */
 uint8_t inc_find_absorp_analytic_fn(
     uint8_t layer,
-    IncTmmData* inc_tmm_data
+    // IncTmmData* inc_tmm_data
+    IncGroupLayersData* inc_group_layers_data
 )
 {
-    // TODO: fix this!!!
-    // double j = inc_tmm_data->stack_from_all[layer];
+    // uint8_t* j = inc_group_layers_data->stack_from_all[layer];
+    uint8_t* j = inc_group_layers_data->stack_from_all;
+
+    // TODO: add is coherent layer check; refer to tmm_core.py
+    // layer must be coherent for this function!
+
+    uint8_t stackindex = j[layer * 2];  // TODO: must validate!!!
+    uint8_t withinstackindex = j[layer * 2 + 1];  // TODO: must validate!!!
 
     AbsorpAnalyticFn forward_absorp_fn;
-    CohTmmData coh_tmm_data;
-    fill_in(&forward_absorp_fn, &coh_tmm_data, layer);
+    // CohTmmData coh_tmm_data;
+    CohTmmData coh_tmm_data = (
+        inc_group_layers_data->inc_tmm_data.coh_tmm_data_list[stackindex]
+    );
+    fill_in(
+        &forward_absorp_fn, &coh_tmm_data, withinstackindex
+    );
     // scale(&forward_absorp_fn, );
     flip(&forward_absorp_fn);
 
     AbsorpAnalyticFn back_absorp_fn;
-    fill_in(&back_absorp_fn, &coh_tmm_data, layer);
+    CohTmmData coh_tmm_bdata = (
+        inc_group_layers_data->inc_tmm_data.coh_tmm_bdata_list[stackindex]
+    );
+    fill_in(&back_absorp_fn, &coh_tmm_bdata, layer);
     // scale(&back_absorp_fn, );
     flip(&back_absorp_fn);
 

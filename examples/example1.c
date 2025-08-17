@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
     interface_t(0, eta_1, eta_2, th_1, th_2_guess, &t);
     printf("transmission coefficient, t = %.3f + %.3fi\n", creal(t), cimag(t));
 
-    // Compute reflectivity R and transmittivity
+    // Compute reflectivity R and transmittivity T
     double R;
     R_from_r(r, &R);
     printf("reflectivity, R = %.3f\n", R);
