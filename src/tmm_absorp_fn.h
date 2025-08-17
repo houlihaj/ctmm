@@ -9,6 +9,11 @@
 #include "tmm_coherent.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /**
  * @brief Absorption in a given layer is a pretty simple analytical function.
  *
@@ -56,6 +61,11 @@ uint8_t scale(AbsorpAnalyticFn* self, double factor);
 
 
 uint8_t add(AbsorpAnalyticFn* self, const AbsorpAnalyticFn* b);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif //TMM_ABSORP_FN_H

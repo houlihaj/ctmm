@@ -9,6 +9,11 @@
 #include <complex.h>
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /**
  * @brief asdfas
  *
@@ -36,6 +41,11 @@ uint8_t CohTmmData_create(CohTmmData* self, uint8_t num_layers);
 
 
 uint8_t CohTmmData_destroy(CohTmmData* self);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif //TMM_COHERENT_H

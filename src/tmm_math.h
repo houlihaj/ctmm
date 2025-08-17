@@ -9,6 +9,11 @@
 #include <complex.h>
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 uint8_t tmm_matrix_product(
     const double complex mat1[2][2],
     const double complex mat2[2][2],
@@ -36,6 +41,11 @@ uint8_t tmm_scalar_product(
 uint8_t tmm_transpose(
     double complex vw[2][1], double complex vw_tr[1][2]
 );
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif //TMM_MATH_H

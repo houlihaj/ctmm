@@ -1272,7 +1272,7 @@ uint8_t inc_tmm(
         &inc_group_layers_data, n_list, d_list, c_list, num_layers, num_inc_layers, num_stacks
     );
     double complex* stack_n_list = inc_group_layers_data.stack_n_list;  // TODO: validate member access is correct
-    double* stack_d_list = inc_group_layers_data.stack_n_list;
+    double* stack_d_list = inc_group_layers_data.stack_d_list;
     uint8_t* all_from_stack = inc_group_layers_data.all_from_stack;
     uint8_t* all_from_inc = inc_group_layers_data.all_from_inc;
     uint8_t* stack_from_inc = inc_group_layers_data.stack_from_inc;
@@ -1285,11 +1285,9 @@ uint8_t inc_tmm(
     list_snell(n_list, num_layers, th_0, th_list);
 
     // coh_tmm_data_list[i] is the output of coh_tmm for the i'th stack
-    // TODO: coh_tmm_data_list = []
     CohTmmData coh_tmm_data_list[num_stacks];
     // coh_tmm_bdata_list[i] is the same stack as coh_tmm_data_list[i] but
     // with order of layers reversed
-    // TODO: coh_tmm_bdata_list = []
     CohTmmData coh_tmm_bdata_list[num_stacks];
 
     for (int i = 0; i < num_stacks; i++)
@@ -1322,29 +1320,116 @@ uint8_t inc_tmm(
     // incoherent layer. Only need to calculate this when j=i+1 or j=i-1.
     // (2D array is overkill but helps avoid confusion.)
     // initialize these arrays
-    double complex t_list[num_inc_layers][num_inc_layers];
-    tmm_matrix_zeros(num_inc_layers, t_list);
-    double complex r_list[num_inc_layers][num_inc_layers];
-    tmm_matrix_zeros(num_inc_layers, r_list);
+    double complex T_list[num_inc_layers][num_inc_layers];
+    tmm_matrix_zeros(num_inc_layers, T_list);
+    double complex R_list[num_inc_layers][num_inc_layers];
+    tmm_matrix_zeros(num_inc_layers, R_list);
     for (int inc_index = 0; inc_index < num_inc_layers - 1; inc_index++)  // looking at interface i -> i + 1
     {
         uint8_t alllayer_index = all_from_inc[inc_index];
         uint8_t nextstack_index = stack_from_inc[inc_index + 1];
+        const uint8_t nan = 255;  // use in place of np.nan
+        if (nextstack_index == nan)  // next layer is incoherent
+        {
+            double R;
+            interface_R(
+                pol,  // const uint8_t polarization,
+                n_list[alllayer_index],  // const double complex n_i,
+                n_list[alllayer_index + 1],  // const double complex n_f,
+                th_list[alllayer_index],  // const double th_i,
+                th_list[alllayer_index + 1],  // const double th_f,
+                &R  // double* R
+            );
+            R_list[inc_index][inc_index + 1] = R;
+
+            double T;
+            interface_T(
+                pol,  // const uint8_t polarization,
+                n_list[alllayer_index],  // const double complex n_i,
+                n_list[alllayer_index + 1],  // const double complex n_f,
+                th_list[alllayer_index],  // const double th_i,
+                th_list[alllayer_index + 1],  // const double th_f,
+                &T  // double* T
+            );
+            T_list[inc_index][inc_index + 1] = T;
+
+            interface_R(
+                pol,  // const uint8_t polarization,
+                n_list[alllayer_index + 1],  // const double complex n_i,
+                n_list[alllayer_index],  // const double complex n_f,
+                th_list[alllayer_index + 1],  // const double th_i,
+                th_list[alllayer_index],  // const double th_f,
+                &R  // double* R
+            );
+            R_list[inc_index + 1][inc_index] = R;
+
+            interface_T(
+                pol,  // const uint8_t polarization,
+                n_list[alllayer_index + 1],  // const double complex n_i,
+                n_list[alllayer_index],  // const double complex n_f,
+                th_list[alllayer_index + 1],  // const double th_i,
+                th_list[alllayer_index],  // const double th_f,
+                &T  // double* T
+            );
+            T_list[inc_index + 1][inc_index] = T;
+        } else  // next layer is coherent
+        {
+            R_list[inc_index][inc_index + 1] = (
+                coh_tmm_data_list[nextstack_index].R
+            );
+            T_list[inc_index][inc_index + 1] = (
+                coh_tmm_data_list[nextstack_index].T
+            );
+
+            R_list[inc_index + 1][inc_index] = (
+                coh_tmm_bdata_list[nextstack_index].R
+            );
+            T_list[inc_index + 1][inc_index] = (
+                coh_tmm_bdata_list[nextstack_index].T
+            );
+        }
     }
 
     // L is the transfer matrix from the i'th to (i+1)st incoherent layer, see
     // https://arxiv.org/abs/1603.02720
+    // TODO: L_list = [nan] # L_0 is not defined because 0'th layer has no beginning.
+    // TODO: Ltilde declaration and assignment
     for (int i = 1; i < num_inc_layers - 1; i++)
     {
-
+        double mat1[2][2];
+        double mat2[2][2];
+        // tmm_scalar_division(mat2, T_list[i][i + 1]);
+        // tmm_matrix_product(mat1, mat2);
     }
+    double T = 0.0;
+    double R = 0.0;
 
     // VW_list[n] = [V_n, W_n], the forward- and backward-moving intensities
     // at the beginning of the n'th incoherent layer. VW_list[0] is undefined
     // because 0'th layer has no beginning.
-    for (int i = num_layers - 2; i > 0; i--)
-    {
+    double VW_list[num_inc_layers][2];
+    const uint8_t nan = 255;  // use in place of np.nan
+    VW_list[0][0] = nan;  // TODO: validate proper value for nan
+    VW_list[0][1] = nan;  // TODO: validate proper value for nan
+    // 2x1 array (2 rows, 1 column)
+    double VW[2][1] = {{T},{0.0}};
 
+    // // 1x2 array (1 rows, 2 column)
+    // double complex VW_tr[1][2];
+    // tmm_transpose(VW, VW_tr);
+    // VW_list[num_layers - 1][0] = VW_tr[0][0];
+    // VW_list[num_layers - 1][1] = VW_tr[0][1];
+
+    // for (int i = num_layers - 2; i > 0; i--)  // temporary to snap to previous implementation
+    for (int i = num_inc_layers - 2; i > 0; i--)
+    {
+        // TODO: VW = np.dot(L_list[i], VW)
+        // TODO: VW_list[i,:] = np.transpose(VW)
+
+        // tmm_matrix_by_vector(L_list[i], VW, VW);
+        // tmm_transpose(VW, VW_tr);
+        // VW_list[i][0] = VW_tr[0][0];
+        // VW_list[i][1] = VW_tr[0][1];
     }
 
     // stackFB_list[n]=[F,B] means that F is light traveling forward towards n'th
@@ -1355,9 +1440,11 @@ uint8_t inc_tmm(
     // power_entering_list[i] is the normalized Poynting vector crossing the
     // interface into the i'th incoherent layer from the previous (coherent or
     // incoherent) layer. See https://arxiv.org/abs/1603.02720 .
+    double power_entering_list[num_inc_layers];  // TODO: update with struct member
+    power_entering_list[0] = 1.0;  // "1" by convention for infinite 0th layer.
     for (int i = 1; i < num_inc_layers; i++)
     {
-
+        uint8_t prev_stack_index = stack_from_inc[1];
     }
 
     IncGroupLayersData_destroy(&inc_group_layers_data);

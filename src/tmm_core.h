@@ -11,6 +11,11 @@
 #include "tmm_incoherent.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 //----------------------------------------------------------------------------------
 // Some basic Defines
 //----------------------------------------------------------------------------------
@@ -222,6 +227,11 @@ uint8_t inc_group_layers(
 //
 //
 // uint8_t inc_find_absorp_analytic_fn(uint8_t layer, double inc_data);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif //TMM_CORE_H

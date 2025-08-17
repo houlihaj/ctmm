@@ -11,6 +11,11 @@
 #include "tmm_coherent.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /**
  * @brief Incoherent TMM Data struct
  *
@@ -63,6 +68,11 @@ uint8_t IncGroupLayersData_create(
 
 
 uint8_t IncGroupLayersData_destroy(IncGroupLayersData* self);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif //TMM_INCOHERENT_H
