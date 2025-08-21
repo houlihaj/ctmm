@@ -17,6 +17,9 @@ add_executable(${PROJECT_NAME}
         src/tmm_util.h
         src/tmm_incoherent.c
         src/tmm_incoherent.h
+        src/tmm_logging.c
+        src/tmm_logging.h
+        external/log.c/log.c
 )
 
 # Link with the math library (-lm)
