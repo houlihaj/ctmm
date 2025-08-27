@@ -1064,14 +1064,35 @@ uint8_t absorp_in_each_layer(
  *
  * An "alllayer index" labels all layers (all elements of d_list) 0,1,2,...
  *
+ * Returns info about how the layers relate:
+ *
+ * - stack_d_list[i] = list of thicknesses of each coherent layer in the i'th
+ *   stack, plus starting and ending with "inf"
+ * - stack_n_list[i] = list of refractive index of each coherent layer in the
+ *   i'th stack, plus the two surrounding incoherent layers
+ * - all_from_inc[i] = j means that the layer with incoherent index i has
+ *   alllayer index j
+ * - inc_from_all[i] = j means that the layer with alllayer index i has
+ *   incoherent index j. If j = nan then the layer is coherent.
+ * - all_from_stack[i1][i2] = j means that the layer with stack index i1 and
+ *   within-stack index i2 has alllayer index j
+ * - stack_from_all[i] = [j1 j2] means that the layer with alllayer index i is
+ *   part of stack j1 with withinstack-index j2. If stack_from_all[i] = nan
+ *   then the layer is incoherent
+ * - inc_from_stack[i] = j means that the i'th stack comes after the layer
+ *   with incoherent index j, and before the layer with incoherent index j+1.
+ * - stack_from_inc[i] = j means that the layer with incoherent index i comes
+ *   immediately after the j'th stack. If j=nan, it is not immediately
+ *   following a stack.
+ *
  * @param inc_group_layers_data
  * @param n_list
  * @param d_list
  * @param c_list coherency list; entries should be 'i' (0) for incoherent or
  *     'c' (1) for 'coherent'
  * @param num_layers Number of layers; same as size of n_list and d_list
- * @param num_inc_layers
- * @param num_stacks
+ * @param num_inc_layers Number of incoherent layers
+ * @param num_stacks Number of stacks
  * @return
  */
 uint8_t inc_group_layers(
@@ -1144,67 +1165,57 @@ uint8_t inc_group_layers(
         if (c_list[alllayer_index] == 1)  // coherent layer
         {
             printf("coherent layer\n");
-            inc_from_all[alllayer_index] = nan;
+            inc_from_all[alllayer_index] = nan;  // gtg; array size is equivalent to num_layers
             if (!stack_in_progress)  // this layer is starting new stack
             {
+                within_stack_index = 0;
                 stack_in_progress = true;
-                ongoing_stack_d_list[stack_index * 2] = INFINITY;
-                ongoing_stack_d_list[stack_index * 2 + 1] = d_list[alllayer_index];
-                ongoing_stack_n_list[stack_index * 2] = n_list[alllayer_index - 1];
-                ongoing_stack_n_list[stack_index * 2 + 1] = n_list[alllayer_index];
-                stack_from_all[alllayer_index * 2] = stack_index;
-                stack_from_all[alllayer_index * 2 + 1] = 1;
-                all_from_stack[stack_index * 2] = alllayer_index - 1;
-                all_from_stack[stack_index * 2 + 1] = alllayer_index;
-                inc_from_stack[stack_index] = inc_index - 1;
-                within_stack_index = 1;
+                ongoing_stack_d_list[within_stack_index] = INFINITY;  // gtg
+                ongoing_stack_d_list[within_stack_index + 1] = d_list[alllayer_index];  // gtg
+                ongoing_stack_n_list[within_stack_index] = n_list[alllayer_index - 1];  // gtg
+                ongoing_stack_n_list[within_stack_index + 1] = n_list[alllayer_index];  // gtg
+                stack_from_all[alllayer_index * 2] = stack_index;  // gtg; size is equivalent to (2 * num_coh_layers + 1 * num_inc_layers)
+                stack_from_all[alllayer_index * 2 + 1] = 1;  // gtg; size is equivalent to (2 * num_coh_layers + 1 * num_inc_layers)
+                all_from_stack[within_stack_index] = alllayer_index - 1;  // gtg
+                all_from_stack[within_stack_index + 1] = alllayer_index;  // gtg
+                inc_from_stack[stack_index] = inc_index - 1;  // gtg; size is equivalent to num_stacks
+                within_stack_index = 1;  // or within_stack_index++
             } else  // another coherent layer in the same stack
             {
-                ongoing_stack_d_list[stack_index * 2] = d_list[alllayer_index];
-                ongoing_stack_d_list[stack_index * 2 + 1] = d_list[alllayer_index];
-                ongoing_stack_n_list[stack_index * 2] = n_list[alllayer_index];
-                ongoing_stack_n_list[stack_index * 2 + 1] = n_list[alllayer_index];
+                ongoing_stack_d_list[within_stack_index] = d_list[alllayer_index];  // gtg
+                ongoing_stack_n_list[within_stack_index] = n_list[alllayer_index];  // gtg
                 within_stack_index++;
-                stack_from_all[alllayer_index * 2] = stack_index;
-                stack_from_all[alllayer_index * 2 + 1] = within_stack_index;
-                all_from_stack[(stack_index - 1) * 2] = alllayer_index;
-                all_from_stack[(stack_index - 1) * 2 + 1] = alllayer_index;
+                stack_from_all[alllayer_index * 2] = stack_index;  // gtg; size is equivalent to (2 * num_coh_layers + 1 * num_inc_layers)
+                stack_from_all[alllayer_index * 2 + 1] = within_stack_index;  // gtg; size is equivalent to (2 * num_coh_layers + 1 * num_inc_layers)
+                all_from_stack[within_stack_index - 1] = alllayer_index;  // gtg
             }
 
         } else if (c_list[alllayer_index] == 0)  // incoherent layer
         {
             printf("incoherent layer\n");
-            stack_from_all[alllayer_index * 2] = nan;
-            stack_from_all[alllayer_index * 2 + 1] = nan;
-            inc_from_all[alllayer_index] = inc_index;
-            all_from_inc[inc_index] = alllayer_index;  // TODO: must validate!!!
+            stack_from_all[alllayer_index] = nan;  // gtg; size is equivalent to (2 * num_coh_layers + 1 * num_inc_layers)
+            inc_from_all[alllayer_index] = inc_index;  // gtg; array size is equivalent to num_layers
+            all_from_inc[inc_index] = alllayer_index;  // gtg; array size is equivalent to num_inc_layers
             if (!stack_in_progress)  // previous layer was also incoherent
             {
                 printf("previous layer was also incoherent\n");
-                stack_from_inc[inc_index] = nan;  // TODO: validate!!!
+                stack_from_inc[inc_index] = nan;  // gtg; size is equivalent to num_inc_layers
             } else  // previous layer was coherent
             {
                 printf("previous layer was coherent\n");
                 stack_in_progress = false;
-                stack_from_inc[inc_index] = stack_index;  // TODO: validate!!!
-                // ongoing_stack_d_list[stack_index * 2] = INFINITY;
-                ongoing_stack_d_list[(stack_index - 1) * 2] = INFINITY;  // TODO: validate!!!
-                // ongoing_stack_d_list[stack_index * 2 + 1] = INFINITY;
-                ongoing_stack_d_list[(stack_index - 1) * 2 + 1] = INFINITY;  // TODO: validate!!!
-                for (int i = 0; i < stack_index * 2; i++)
+                stack_from_inc[inc_index] = stack_index;  // gtg; size is equivalent to num_inc_layers
+                ongoing_stack_d_list[within_stack_index] = INFINITY;  // sketchy but gtg
+                for (int i = 0; i < stack_index * 2; i++)  // i should not start at zero always
                 {
                     stack_d_list[i] = ongoing_stack_d_list[i];
                 }
-                // ongoing_stack_n_list[stack_index * 2] = n_list[alllayer_index];
-                ongoing_stack_n_list[(stack_index - 1) * 2] = n_list[alllayer_index];  // TODO: validate!!!
-                // ongoing_stack_n_list[stack_index * 2 + 1] = n_list[alllayer_index];
-                ongoing_stack_n_list[(stack_index - 1) * 2 + 1] = n_list[alllayer_index];  // TODO: validate!!!
-                for (int i = 0; i < stack_index * 2; i++)
+                ongoing_stack_n_list[within_stack_index] = n_list[alllayer_index];  // sketchy but gtg
+                for (int i = 0; i < stack_index * 2; i++)  // i should not start at zero always
                 {
                     stack_n_list[i] = ongoing_stack_n_list[i];
                 }
-                all_from_stack[(stack_index - 1) * 2] = alllayer_index;
-                all_from_stack[(stack_index - 1) * 2 + 1] = alllayer_index;
+                all_from_stack[within_stack_index - 1] = alllayer_index;  // gtg
                 stack_index++;
             }
 

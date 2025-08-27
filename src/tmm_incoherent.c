@@ -19,11 +19,16 @@ uint8_t IncTmmData_create(IncTmmData* self, const uint8_t num_inc_layers)
 {
     self->num_inc_layers = num_inc_layers;
 
-    self->VW_list = malloc((num_inc_layers * 2) * sizeof(double));
-    self->power_entering_list = malloc(num_inc_layers * sizeof(double));
-    self->stackFB_list = malloc((num_inc_layers * 2) * sizeof(double complex));
-    self->coh_tmm_data_list = malloc(num_inc_layers * sizeof(CohTmmData));
-    self->coh_tmm_bdata_list = malloc(num_inc_layers * sizeof(CohTmmData));
+    // self->VW_list = malloc((num_inc_layers * 2) * sizeof(double));
+    self->VW_list = malloc((num_inc_layers * 2) * sizeof(*self->VW_list));
+    // self->power_entering_list = malloc(num_inc_layers * sizeof(double));
+    self->power_entering_list = malloc(num_inc_layers * sizeof(*self->power_entering_list));
+    // self->stackFB_list = malloc((num_inc_layers * 2) * sizeof(double complex));
+    self->stackFB_list = malloc((num_inc_layers * 2) * sizeof(*self->stackFB_list));
+    // self->coh_tmm_data_list = malloc(num_inc_layers * sizeof(CohTmmData));
+    self->coh_tmm_data_list = malloc(num_inc_layers * sizeof(*self->coh_tmm_data_list));
+    // self->coh_tmm_bdata_list = malloc(num_inc_layers * sizeof(CohTmmData));
+    self->coh_tmm_bdata_list = malloc(num_inc_layers * sizeof(*self->coh_tmm_bdata_list));
 
     if (
         !self->VW_list
@@ -81,14 +86,22 @@ uint8_t IncGroupLayersData_create(
 {
     self->num_layers = num_layers;
 
-    self->stack_d_list = malloc((num_stacks * 2) * sizeof(double));
-    self->stack_n_list = malloc((num_stacks * 2) * sizeof(double complex));
-    self->all_from_inc = malloc(num_inc_layers * sizeof(uint8_t));
-    self->inc_from_all = malloc(num_layers * sizeof(uint8_t));
-    self->all_from_stack = malloc(num_layers * sizeof(uint8_t));
-    self->stack_from_all = malloc((num_layers * 2) * sizeof(uint8_t));
-    self->inc_from_stack = malloc(num_stacks * sizeof(uint8_t));
-    self->stack_from_inc = malloc(num_inc_layers * sizeof(uint8_t));
+    // self->stack_d_list = malloc((num_stacks * 2) * sizeof(double));
+    self->stack_d_list = malloc((num_stacks * 2) * sizeof(*self->stack_d_list));
+    // self->stack_n_list = malloc((num_stacks * 2) * sizeof(double complex));
+    self->stack_n_list = malloc((num_stacks * 2) * sizeof(*self->stack_n_list));
+    // self->all_from_inc = malloc(num_inc_layers * sizeof(uint8_t));
+    self->all_from_inc = malloc(num_inc_layers * sizeof(*self->all_from_inc));
+    // self->inc_from_all = malloc(num_layers * sizeof(uint8_t));
+    self->inc_from_all = malloc(num_layers * sizeof(*self->inc_from_all));
+    // self->all_from_stack = malloc(num_layers * sizeof(uint8_t));
+    self->all_from_stack = malloc(num_layers * sizeof(*self->all_from_stack));
+    // self->stack_from_all = malloc((num_layers * 2) * sizeof(uint8_t));
+    self->stack_from_all = malloc((num_layers * 2) * sizeof(*self->stack_from_all));
+    // self->inc_from_stack = malloc(num_stacks * sizeof(uint8_t));
+    self->inc_from_stack = malloc(num_stacks * sizeof(*self->inc_from_stack));
+    // self->stack_from_inc = malloc(num_inc_layers * sizeof(uint8_t));
+    self->stack_from_inc = malloc(num_inc_layers * sizeof(*self->stack_from_inc));
 
     if (
         !self->stack_d_list

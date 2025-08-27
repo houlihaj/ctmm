@@ -18,11 +18,16 @@ uint8_t CohTmmData_create(CohTmmData* self, const uint8_t num_layers)
 {
     self->num_layers = num_layers;
 
-    self->vw_list = malloc((num_layers * 2) * sizeof(double complex));
-    self->kz_list = malloc(num_layers * sizeof(double complex));
-    self->th_list = malloc(num_layers * sizeof(double complex));
-    self->n_list = malloc(num_layers * sizeof(double complex));
-    self->d_list = malloc(num_layers * sizeof(double));
+    // self->vw_list = malloc((num_layers * 2) * sizeof(double complex));
+    self->vw_list = malloc((num_layers * 2) * sizeof(*self->vw_list));
+    // self->kz_list = malloc(num_layers * sizeof(double complex));
+    self->kz_list = malloc(num_layers * sizeof(*self->kz_list));
+    // self->th_list = malloc(num_layers * sizeof(double complex));
+    self->th_list = malloc(num_layers * sizeof(*self->th_list));
+    // self->n_list = malloc(num_layers * sizeof(double complex));
+    self->n_list = malloc(num_layers * sizeof(*self->n_list));
+    // self->d_list = malloc(num_layers * sizeof(double));
+    self->d_list = malloc(num_layers * sizeof(*self->d_list));
 
     if (!self->vw_list || !self->kz_list || !self->th_list || !self->n_list || !self->d_list) {
         fprintf(stderr, "Error allocating memory for at least one array\n");
